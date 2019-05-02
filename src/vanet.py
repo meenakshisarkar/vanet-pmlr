@@ -22,3 +22,9 @@ class VANET(object):
         self.acc_shape= [batch_size, timesteps-2, image_size[0], image_size[1], c_dim]
         self.xt_shape= [batch_size, timesteps, image_size[0], image_size[1], c_dim]
         self.predict_shape=[batch_size, predict, image_size[0], image_size[1], c_dim]
+        
+        self.create_model()
+    
+    
+    def create_model(self):
+        
