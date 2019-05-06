@@ -21,7 +21,7 @@ class VANET(object):
         self.vel_shape= [batch_size, timesteps-1, image_size[0], image_size[1], c_dim]
         self.acc_shape= [batch_size, timesteps-2, image_size[0], image_size[1], c_dim]
         self.xt_shape= [batch_size, image_size[0], image_size[1], c_dim]
-        self.predict_shape=[batch_size, predict, image_size[0], image_size[1], c_dim]
+        self.gt_shape=[batch_size, predict, image_size[0], image_size[1], c_dim]
         
         self.create_model()
     
@@ -30,9 +30,14 @@ class VANET(object):
         self.velocity= tf.placeholder(tf.float32, self.vel_shape, name= 'velocity')
         self.accelaration= tf.placeholder(tf.float32, self.acc_shape, name= 'accelaration')
         self.xt= tf.placeholder(tf.float32, self.xt_shape, name= 'xt')
-        self.predict= tf.placeholder(tf.float32, self.predict_shape, name= 'predict')
+        self.gt= tf.placeholder(tf.float32, self.gt_shape, name= 'gt')
+        cell= BasicConvLSTMCell([self.image_size[0]/8, self.image_size[1]/8],
+                             [3, 3], 256)
+        predict= forward_model(self.velocity, self.accelaration, self.xt, cell)
+        
         
     def forward_model(self):
+        
     
     def vel_enc(self):
 
