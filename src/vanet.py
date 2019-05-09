@@ -71,3 +71,11 @@ class VANET(object):
         h2_state, state = vel_LSTM(h1_state, state, scope= 'vel_lstm2', reuse=reuse_vel)
         h3_state, state = vel_LSTM(h2_state, state, scope= 'vel_lstm3', reuse=reuse_vel)
         return h_vel_out, vel_state, vel_res_in
+    
+    def acc_end(self):
+    
+
+    def content_enc(self):
+    
+
+    def dec(self):
