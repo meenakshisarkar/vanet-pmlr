@@ -26,13 +26,13 @@ class VANET(object):
         self.create_model()
     
     
-        def create_model(self):
+    def create_model(self):
         self.velocity = tf.placeholder(tf.float32, self.vel_shape, name='velocity')
         self.accelaration = tf.placeholder(tf.float32, self.acc_shape, name='accelaration')
         self.xt = tf.placeholder(tf.float32, self.xt_shape, name='xt')
         self.predict = tf.placeholder(tf.float32, self.predict_shape, name='predict')
-        cell = BasicConvLSTMCell([self.image_size[0] / 8, self.image_size[1] / 8],
-                                 [3, 3], 256)
+        vel_LSTM = BasicConvLSTMCell([self.image_size[0] / 8, self.image_size[1] / 8],
+                                 [3, 3], self.filters*4)
         predict = forward_model(self.velocity, self.accelaration, self.xt, cell)
         self.G = tf.concat(axis=3, values=predict)
 
@@ -41,7 +41,7 @@ class VANET(object):
         reuse_vel = False
         # Encoder
         for t in xrange(self.timesteps-1):
-            enc_h, res_m = self.motion_enc(diff_in[:, :, :, t, :], reuse=reuse_vel)
+            h_vel_out, vel_state, vel_res_in = self.vel_enc(diff_in[:, :, :, t, :], reuse=reuse_vel)
             h_dyn, state = cell(enc_h, state, scope='lstm', reuse=reuse_vel)
             reuse_vel = True
         for t in xrange(self.timesteps-2):
@@ -51,21 +51,23 @@ class VANET(object):
 
         pred = []
 
-    def vel_enc(self):
-        cell1 = BasicConvLSTMCell([self.image_size[0] / 8, self.image_size[1] / 8],
-                                 [3, 3], 256)
-        cell2 = BasicConvLSTMCell([self.image_size[0] / 8, self.image_size[1] / 8],
-                                 [3, 3], 256)
+    def vel_enc(self, vel_in, vel_state, vel_LSTM , reuse):
+        vel_res_in = []
+        conv1 = relu(conv2d(vel_in, output_dim=self.filters, k_h=5, k_w=5,
+                        d_h=1, d_w=1, name='dyn_conv1', reuse=reuse))
+        vel_res_in.append(conv1)
+        pool1 = MaxPooling(conv1, [2,2])
 
-        
+        conv2 = relu(conv2d(pool1, output_dim=self.filters*2, k_h=5, k_w=5,
+                        d_h=1, d_w=1, name='dyn_conv2',reuse=reuse))
+        vel_res_in.append(conv2)
+        pool2 = MaxPooling(conv2, [2,2])
 
-    def acc_end(self):
-    
-
-    def content_enc(self):
-    
-
-    def dec(self):
-
-
-        
+        conv3 = relu(conv2d(pool2, output_dim=self.filters*4, k_h=7, k_w=7,
+                        d_h=1, d_w=1, name='dyn_conv3',reuse=reuse))
+        vel_res_in.append(conv3)
+        pool3 = MaxPooling(conv3, [2,2])
+        h1_state, state = vel_LSTM(conv3, state, scope= 'vel_lstm1', reuse=reuse_vel)
+        h2_state, state = vel_LSTM(h1_state, state, scope= 'vel_lstm2', reuse=reuse_vel)
+        h3_state, state = vel_LSTM(h2_state, state, scope= 'vel_lstm3', reuse=reuse_vel)
+        return h_vel_out, vel_state, vel_res_in
