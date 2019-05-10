@@ -137,11 +137,15 @@ class VANET(object):
         return pool3, con_res_in
 
     def conv_layer(self,h_con_state, h_acc_out, h_vel_out, reuse):
-        conv_out1= convOp(h_con_state, h_acc_out)
-        conv_out2= convOp(conv_out1, h_vel_out)
+        conv_out1= convOp(h_con_state, h_acc_out, reuse)
+        conv_out2= convOp(conv_out1, h_vel_out, reuse)
         return conv_out2
 
     def res_conv_layer(self, con_res_in, acc_res_in, vel_res_in, reuse):
+        res_conv_out=[]
+        for l in length(con_res_in):
+
+
         return
     def dec_layer(self, cont_conv,res_conv, reuse):
         return
