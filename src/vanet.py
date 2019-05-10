@@ -55,6 +55,8 @@ class VANET(object):
         for t in xrange(self.predict):
             if t==0:
                 h_con_state, con_res_in= self.content_enc(xt, reuse=False)
+                acc_conv= conv_layer(h_con_state, h_acc_out, resue= False)
+                vel_conv = conv_layer(acc_conv, h_acc_out, reuse= False)
                 
 
 
