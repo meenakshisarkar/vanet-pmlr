@@ -151,4 +151,10 @@ class VANET(object):
         return res_conv_out
             
     def dec_layer(self, cont_conv,res_conv, reuse):
+        no_layers= len(cont_conv)
+        for i in xrange(no_layers):
+            decod1= tf.concat()
+
+
+
         return
