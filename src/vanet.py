@@ -152,8 +152,9 @@ class VANET(object):
             
     def dec_layer(self, cont_conv,res_conv, reuse):
         no_layers= len(cont_conv)
-        for i in xrange(no_layers):
-            decod1= tf.concat()
+        for i in xrange(no_layers-1,-1,-1):
+            decod1= tf.concat(axis=3, values=[cont_conv[i], res_conv[i]])
+
 
 
 
