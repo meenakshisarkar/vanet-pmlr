@@ -172,12 +172,3 @@ class VANET(object):
         decode_out = relu(conv2d(decod4_1, output_dim=3, k_h=1, k_w=1,
                             d_h=1, d_w=1, name='con_conv3', reuse=reuse))
         return decode_out
-
-
-
-
-
-
-
-
-        return
