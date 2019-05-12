@@ -152,8 +152,30 @@ class VANET(object):
             
     def dec_layer(self, cont_conv,res_conv, reuse):
         no_layers= len(cont_conv)
-        for i in xrange(no_layers-1,-1,-1):
-            decod1= tf.concat(axis=3, values=[cont_conv[i], res_conv[i]])
+
+        decod1_1= tf.concat(axis=3, values=[cont_conv, res_conv[2]])
+        up_samp1 = FixedUnPooling(decod1_1, [2, 2])
+        decode1_2= relu(deconv2d(up_samp1,
+                                      output_shape=shapel2, k_h=3, k_w=3,
+                                      d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+        decod2_1 = tf.concat(axis=3, values=[decode1_2, res_conv[1]])
+        up_samp2 = FixedUnPooling(decod2_1, [2, 2])
+        decode2_2 = relu(deconv2d(up_samp2,
+                                  output_shape=shapel2, k_h=3, k_w=3,
+                                  d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+        decod3_1 = tf.concat(axis=3, values=[decode2_2, res_conv[1]])
+        up_samp3 = FixedUnPooling(decod3_1, [2, 2])
+        decode3_2 = relu(deconv2d(up_samp3,
+                                  output_shape=shapel2, k_h=3, k_w=3,
+                                  d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+        decod4_1 = tf.concat(axis=3, values=[decode3_2, xt])
+        decode_out = relu(conv2d(decod4_1, output_dim=3, k_h=1, k_w=1,
+                            d_h=1, d_w=1, name='con_conv3', reuse=reuse))
+        return decode_out
+
+
+
+
 
 
 
