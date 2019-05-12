@@ -12,6 +12,9 @@ def batch_norm(inputs, name, train=True, reuse=False):
   return tf.contrib.layers.batch_norm(inputs=inputs,is_training=train,
                                       reuse=reuse,scope=name,scale=True)
 
+def convOp(input, kernal, reuse=Flase,name=None):
+    with tf.variable_scope(name, reuse=reuse):
+        return tf.nn.convolution(input, kernal, padding= 'SAME', strides= [1,1,1,1] )
 
 def convolution()
 
