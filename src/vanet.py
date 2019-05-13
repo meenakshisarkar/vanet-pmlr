@@ -122,18 +122,18 @@ class VANET(object):
         con_res_in = []
         conv1 = relu(conv2d(xt, output_dim=self.filters, k_h=5, k_w=5,
                             d_h=1, d_w=1, name='con_conv1', reuse=reuse))
-        con_res_in.append(conv1)
-        pool1 = MaxPooling(conv1, [2, 2])
+        con_res_in.append(conv1)               ### 128*128*32
+        pool1 = MaxPooling(conv1, [2, 2])      ####64*64*32
 
         conv2 = relu(conv2d(pool1, output_dim=self.filters * 2, k_h=5, k_w=5,
                             d_h=1, d_w=1, name='con_conv2', reuse=reuse))
-        con_res_in.append(conv2)
-        pool2 = MaxPooling(conv2, [2, 2])
+        con_res_in.append(conv2)               ### 64*64*64
+        pool2 = MaxPooling(conv2, [2, 2])      ### 32*32*64
 
         conv3 = relu(conv2d(pool2, output_dim=self.filters * 4, k_h=3, k_w=3,
                             d_h=1, d_w=1, name='con_conv3', reuse=reuse))
-        con_res_in.append(conv3)
-        pool3 = MaxPooling(conv3, [2, 2])
+        con_res_in.append(conv3)              #### 32*32*128
+        pool3 = MaxPooling(conv3, [2, 2])     #### 16*16*128
         return pool3, con_res_in
 
     def conv_layer(self,h_con_state, h_acc_out, h_vel_out, reuse):
@@ -153,27 +153,34 @@ class VANET(object):
     def dec_layer(self, cont_conv,res_conv, reuse):
 
         shape1 = [self.batch_size, self.image_size[0]/4,
-                                        self.image_size[1]/4, self.filters*2]
-        decod1_1= tf.concat(axis=3, values=[cont_conv, res_conv[2]])
-        up_samp1 = FixedUnPooling(decod1_1, [2, 2])
-        decode1_2= relu(deconv2d(up_samp1,
-                                      output_shape=shapel1, k_h=3, k_w=3,
+                                        self.image_size[1]/4, self.filters*4]
+        up_samp1 = FixedUnPooling(cont_conv, [2, 2])
+        decode1_1= relu(deconv2d(up_samp1,
+                                      output_shape=shape1, k_h=3, k_w=3,
                                       d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+        #### 128 channels, image 32*32
         shape2 = [self.batch_size, self.image_size[0]/2,
-                                        self.image_size[1]/2, self.filters]
-        decod2_1 = tf.concat(axis=3, values=[decode1_2, res_conv[1]])
+                                        self.image_size[1]/2, self.filters*2]
+        decod2_1 = tf.concat(axis=3, values=[decode1_1, res_conv[2]])
         up_samp2 = FixedUnPooling(decod2_1, [2, 2])
         decode2_2 = relu(deconv2d(up_samp2,
                                   output_shape=shape2, k_h=5, k_w=5,
                                   d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+        ### 64 channels image 64 *64
         shape3 = [self.batch_size, self.image_size[0],
-                                        self.image_size[1], self.filters/2]                          
-        decod3_1 = tf.concat(axis=3, values=[decode2_2, res_conv[0]])
+                                        self.image_size[1], self.filters]
+        decod3_1 = tf.concat(axis=3, values=[decode2_2, res_conv[1]])
         up_samp3 = FixedUnPooling(decod3_1, [2, 2])
         decode3_2 = relu(deconv2d(up_samp3,
-                                  output_shape=shapel2, k_h=5, k_w=5,
+                                  output_shape=shape3, k_h=5, k_w=5,
                                   d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
-        decod4_1 = tf.concat(axis=3, values=[decode3_2, xt])
-        decode_out = relu(conv2d(decod4_1, output_dim=3, k_h=1, k_w=1,
+        #### 32 channels image 128*128
+        decod4_1 = tf.concat(axis=3, values=[decode3_2, res_conv[0]])
+        decode4_2 = relu(deconv2d(decod4_1,
+                                  output_shape=shape3, k_h=5, k_w=5,
+                                  d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+
+        decod5_1 = tf.concat(axis=3, values=[decode4_2, self.xt])
+        decode_out = relu(conv2d(decod5_1, output_dim=self.c_dim, k_h=1, k_w=1,
                             d_h=1, d_w=1, name='con_conv3', reuse=reuse))
         return decode_out
