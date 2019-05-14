@@ -186,3 +186,6 @@ class VANET(object):
                             d_h=1, d_w=1, name='decode_out', reuse=reuse))
 
         return decode_out
+    def discriminator(self, img):
+
+        return
