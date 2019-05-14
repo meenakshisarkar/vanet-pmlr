@@ -37,7 +37,8 @@ class VANET(object):
         acc_LSTM = BasicConvLSTMCell([self.image_size[0] / 8, self.image_size[1] / 8],
                                           [3, 3], self.filters * 4)
         predict = self.forward_model(self.velocity, self.accelaration, self.xt, vel_LSTM, acc_LSTM)
-        self.G = tf.concat(axis=3, values=predict)
+        self.G = tf.concat(axis=1, values=predict)
+
 
     def forward_model(self, vel_in, acc_in, xt, vel_LSTM, acc_LSTM):
         vel_state = tf.zeros([self.batch_size, self.image_size[0] / 8, self.image_size[1] / 8, 512])
@@ -157,7 +158,7 @@ class VANET(object):
         up_samp1 = FixedUnPooling(cont_conv, [2, 2])
         decode1_1= relu(deconv2d(up_samp1,
                                       output_shape=shape1, k_h=3, k_w=3,
-                                      d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+                                      d_h=1, d_w=1, name='dec_deconv1_1', reuse=reuse))
         #### 128 channels, image 32*32
         shape2 = [self.batch_size, self.image_size[0]/2,
                                         self.image_size[1]/2, self.filters*2]
@@ -173,15 +174,15 @@ class VANET(object):
         up_samp3 = FixedUnPooling(decod3_1, [2, 2])
         decode3_2 = relu(deconv2d(up_samp3,
                                   output_shape=shape3, k_h=5, k_w=5,
-                                  d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+                                  d_h=1, d_w=1, name='dec_deconv3_2', reuse=reuse))
         #### 32 channels image 128*128
         decod4_1 = tf.concat(axis=3, values=[decode3_2, res_conv[0]])
         decode4_2 = relu(deconv2d(decod4_1,
                                   output_shape=shape3, k_h=5, k_w=5,
-                                  d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
+                                  d_h=1, d_w=1, name='dec_deconv4_2', reuse=reuse))
 
         decod5_1 = tf.concat(axis=3, values=[decode4_2, self.xt])
         decode_out = relu(conv2d(decod5_1, output_dim=self.c_dim, k_h=1, k_w=1,
-                            d_h=1, d_w=1, name='con_conv3', reuse=reuse))
-        
+                            d_h=1, d_w=1, name='decode_out', reuse=reuse))
+
         return decode_out
