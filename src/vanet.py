@@ -183,5 +183,5 @@ class VANET(object):
         decod5_1 = tf.concat(axis=3, values=[decode4_2, self.xt])
         decode_out = relu(conv2d(decod5_1, output_dim=self.c_dim, k_h=1, k_w=1,
                             d_h=1, d_w=1, name='con_conv3', reuse=reuse))
-        
+
         return decode_out
