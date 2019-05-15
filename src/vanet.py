@@ -23,7 +23,7 @@ class VANET(object):
         self.acc_shape = [batch_size, timesteps - 2, image_size[0], image_size[1], c_dim]
         self.xt_shape = [batch_size, image_size[0], image_size[1], c_dim]
         self.gt_shape = [batch_size, timesteps, image_size[0], image_size[1], c_dim]
-        self.predict_shape = [batch_size, self.timesteps+self.F, image_size[0], image_size[1], c_dim]
+        self.target_shape = [batch_size, self.timesteps+self.F, image_size[0], image_size[1], c_dim]
 
         self.create_model()
 
@@ -31,7 +31,7 @@ class VANET(object):
         self.velocity = tf.placeholder(tf.float32, self.vel_shape, name='velocity')
         self.accelaration = tf.placeholder(tf.float32, self.acc_shape, name='accelaration')
         self.xt = tf.placeholder(tf.float32, self.xt_shape, name='xt')
-        ##self.predict = tf.placeholder(tf.float32, self.predict_shape, name='predict')
+        self.target = tf.placeholder(tf.float32, self.target_shape, name='target')
         vel_LSTM = BasicConvLSTMCell([self.image_size[0] / 8, self.image_size[1] / 8],
                                      [3, 3], self.filters * 4)
         acc_LSTM = BasicConvLSTMCell([self.image_size[0] / 8, self.image_size[1] / 8],
@@ -60,9 +60,9 @@ class VANET(object):
                 h_con_state, con_res_in= self.content_enc(xt, reuse=False)
                 cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out, reuse= False)
                 res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in, reuse= False)
-                x_tilda= self.dec_layer(cont_conv,res_conv, reuse= False)
-                vel_in= tf.reshape(value=vel_in[:,self.timesteps - 2,:,:,:], [self.batch_size,:,:,:])
-                acc_in= tf.reshape(value=vel_in[:,self.timesteps - 3,:,:,:], [self.batch_size,:,:,:])
+                x_tilda= self.dec_layer(cont_conv,res_conv, reuse = False)
+                vel_in= tf.reshape(vel_in[:,self.timesteps - 2,:,:,:], [self.batch_size,:,:,:])
+                acc_in= tf.reshape(acc_in[:,self.timesteps - 3,:,:,:], [self.batch_size,:,:,:])
             else:
                 h_vel_out, vel_state, vel_res_in = self.vel_enc(vel_in, vel_state, vel_LSTM, reuse=reuse_vel)
                 h_acc_out, acc_state, acc_res_in = self.acc_enc(acc_in, acc_state, acc_LSTM, reuse=reuse_acc)
@@ -70,7 +70,7 @@ class VANET(object):
                 cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out, reuse= True)
                 res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in, reuse= True)
                 x_tilda= self.dec_layer(cont_conv,res_conv, reuse= True)
-            vel_in_past= vel_in[:, t, :, :, :]
+            vel_in_past= vel_in
             vel_in= x_tilda- xt
             acc_in= vel_in - vel_in_past
             xt=x_tilda
