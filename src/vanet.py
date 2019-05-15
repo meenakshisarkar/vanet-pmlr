@@ -23,7 +23,7 @@ class VANET(object):
         self.acc_shape = [batch_size, timesteps - 2, image_size[0], image_size[1], c_dim]
         self.xt_shape = [batch_size, image_size[0], image_size[1], c_dim]
         self.gt_shape = [batch_size, timesteps, image_size[0], image_size[1], c_dim]
-        self.predict_shape = [batch_size, self.F, image_size[0], image_size[1], c_dim]
+        self.predict_shape = [batch_size, self.timesteps+self.F, image_size[0], image_size[1], c_dim]
 
         self.create_model()
 
@@ -61,14 +61,16 @@ class VANET(object):
                 cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out, reuse= False)
                 res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in, reuse= False)
                 x_tilda= self.dec_layer(cont_conv,res_conv, reuse= False)
+                vel_in= tf.reshape(value=vel_in[:,self.timesteps - 2,:,:,:], [self.batch_size,:,:,:])
+                acc_in= tf.reshape(value=vel_in[:,self.timesteps - 3,:,:,:], [self.batch_size,:,:,:])
             else:
-                h_vel_out, vel_state, vel_res_in = self.vel_enc(vel_in[:, t, :, :, :], vel_state, vel_LSTM, reuse=reuse_vel)
-                h_acc_out, acc_state, acc_res_in = self.acc_enc(acc_in[:, t, :, :, :], acc_state, acc_LSTM, reuse=reuse_acc)
+                h_vel_out, vel_state, vel_res_in = self.vel_enc(vel_in, vel_state, vel_LSTM, reuse=reuse_vel)
+                h_acc_out, acc_state, acc_res_in = self.acc_enc(acc_in, acc_state, acc_LSTM, reuse=reuse_acc)
                 h_con_state, con_res_in= self.content_enc(xt, reuse=True)
                 cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out, reuse= True)
                 res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in, reuse= True)
                 x_tilda= self.dec_layer(cont_conv,res_conv, reuse= True)
-            vel_in_past= vel_in
+            vel_in_past= vel_in[:, t, :, :, :]
             vel_in= x_tilda- xt
             acc_in= vel_in - vel_in_past
             xt=x_tilda
@@ -184,8 +186,22 @@ class VANET(object):
         decod5_1 = tf.concat(axis=3, values=[decode4_2, self.xt])
         decode_out = relu(conv2d(decod5_1, output_dim=self.c_dim, k_h=1, k_w=1,
                             d_h=1, d_w=1, name='decode_out', reuse=reuse))
-
+        
         return decode_out
-    def discriminator(self, img):
 
-        return
+    def discriminator(self, img):
+        h0 = lrelu(conv2d(image, output_dim=self.df_dim,k_h=5, k_w=5,
+                                      d_h=1, d_w=1 name='dis_h0_conv'))
+        h0_pool = MaxPooling(h0, [2, 2]) 
+        h1 = lrelu(batch_norm(conv2d(h0_pool, output_dim=self.df_dim*2, k_h=5, k_w=5,
+                                      d_h=1, d_w=1, name='dis_h1_conv'),"bn1"))
+        h1_pool = MaxPooling(h1, [2, 2]) 
+        h2 = lrelu(batch_norm(conv2d(h1_pool, output_dim=self.df_dim*4,k_h=5, k_w=5,
+                                      d_h=1, d_w=1 name='dis_h2_conv'), "bn2"))
+        h2_pool = MaxPooling(h2, [2, 2]) 
+        h3 = lrelu(batch_norm(conv2d(h2_pool, output_dim=self.df_dim*8,k_h=3, k_w=3,
+                                      d_h=1, d_w=1 name='dis_h3_conv'), "bn3"))
+        h3_pool = MaxPooling(h3, [2, 2]) 
+        h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), 1, 'dis_h3_lin')
+
+        return tf.nn.sigmoid(h), h
