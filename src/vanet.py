@@ -41,10 +41,10 @@ class VANET(object):
 
         dis_reuse= False
         if self.is_train:
-            self.D_real= []
-            self.D_logits_real=[]
-            self.D_fake =[]
-            self.D_logits_fake =[]
+            _D_real= []
+            _D_logits_real=[]
+            _D_fake =[]
+            _D_logits_fake =[]
             for l in xrange(self.F):
                 in_img=tf.reshape(tf.transpose(self.target(:,self.timesteps+l-2:self.timesteps+l,:,:,:), [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
@@ -53,14 +53,19 @@ class VANET(object):
                 gen_img=tf.reshape(tf.transpose(self.predict(:,l,:,:,:), [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
                 real_img= tf.concat(axis=3,[in_img,target_img])
-                real_img= tf.concat(axis=3,[in_img,gen_img])
-                self.D_real_, self.D_logits_real_= self.discriminator(real_image, reuse= dis_reuse)
+                fake_img= tf.concat(axis=3,[in_img,gen_img])
+                self.D_real_, self.D_logits_real_= self.discriminator(real_img, reuse= dis_reuse)
                 if l==0: dis_reuse= True
-                self.D_fake_, self.D_logits_fake_ = self.discriminator(fake_image, reuse= dis_reuse)
-                self.D_real.append(self.D_real_)
-                self.D_logits_real.append(self.D_logits_real_)
-                self.D_fake.append(self.D_fake_)
-                self.D_logits_fake.append(self.D_logits_fake_)
+                self.D_fake_, self.D_logits_fake_ = self.discriminator(fake_img, reuse= dis_reuse)
+                _D_real.append(self.D_real_)
+                _D_logits_real.append(self.D_logits_real_)
+                _D_fake.append(self.D_fake_)
+                _D_logits_fake.append(self.D_logits_fake_)
+            self.D_real= tf.concat(axis=1, values= _D_real)
+            self.D_logits_real= tf.concat(axis=1, values= _D_logits_real)
+            self.D_fake= tf.concat(axis=1, values= _D_fake)
+            self.D_logits_fake= tf.concat(axis=1, values= _D_logits_fake)
+
 
 
 
