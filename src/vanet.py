@@ -65,9 +65,14 @@ class VANET(object):
             self.D_logits_real= tf.concat(axis=1, values= _D_logits_real)
             self.D_fake= tf.concat(axis=1, values= _D_fake)
             self.D_logits_fake= tf.concat(axis=1, values= _D_logits_fake)
-
-
-
+            self.L_p = tf.reduce_mean(
+                tf.square(self.G - self.target[:, :, :, self.K:, :]))
+            self.d_loss_real = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.D_logits, labels=tf.ones_like(self.D)))
+            self.d_loss_fake = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.D_logits_, labels=tf.zeros_like(self.D_)))
 
 
     def forward_model(self, vel_in, acc_in, xt, vel_LSTM, acc_LSTM):
