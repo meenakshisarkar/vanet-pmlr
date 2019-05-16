@@ -39,6 +39,20 @@ class VANET(object):
         predict = self.forward_model(self.velocity, self.accelaration, self.xt, vel_LSTM, acc_LSTM)
         self.G = tf.concat(axis=1, values=predict)
 
+        if self.is_train:
+            for l in xrange(self.F):
+                in_img=tf.reshape(tf.transpose(self.target(:,self.timesteps+l-2:self.timesteps+l,:,:,:), [0,2,3,1,4]),
+                                            [self.batch_size,self.image_size[0], self.image_size[1],-1])
+                target_img=tf.reshape(tf.transpose(self.target(:,self.timesteps+l,:,:,:), [0,2,3,1,4]),
+                                            [self.batch_size,self.image_size[0], self.image_size[1],-1])
+                gen_img=tf.reshape(tf.transpose(self.predict(:,l,:,:,:), [0,2,3,1,4]),
+                                            [self.batch_size,self.image_size[0], self.image_size[1],-1])
+                real_img= tf.concat(axis=3,[in_img,target_img])
+                real_img= tf.concat(axis=3,[in_img,gen_img])
+                self.D, self.D_logits= self.discriminator(real_image, reuse= False)
+                self.D_, self.D_logits_ = self.discriminator(fake_image, reuse= True)
+
+
 
     def forward_model(self, vel_in, acc_in, xt, vel_LSTM, acc_LSTM):
         vel_state = tf.zeros([self.batch_size, self.image_size[0] / 8, self.image_size[1] / 8, 512])
@@ -75,6 +89,7 @@ class VANET(object):
             acc_in= vel_in - vel_in_past
             xt=x_tilda
             predict.append(tf.reshape(x_tilda,[self.batch_size,1, self.image_size[0], self.image_size[1], self.c_dim]))
+
 
         return predict
                 
@@ -133,7 +148,7 @@ class VANET(object):
         con_res_in.append(conv2)               ### 64*64*64
         pool2 = MaxPooling(conv2, [2, 2])      ### 32*32*64
 
-        conv3 = relu(conv2d(pool2, output_dim=self.filters * 4, k_h=3, k_w=3,
+        conv3 = relu(conv2d(pool2, output_dim=self.filters * 4, k_h=3, k_w=3,0
                             d_h=1, d_w=1, name='con_conv3', reuse=reuse))
         con_res_in.append(conv3)              #### 32*32*128
         pool3 = MaxPooling(conv3, [2, 2])     #### 16*16*128
@@ -189,19 +204,20 @@ class VANET(object):
         
         return decode_out
 
-    def discriminator(self, img):
-        h0 = lrelu(conv2d(image, output_dim=self.df_dim,k_h=5, k_w=5,
-                                      d_h=1, d_w=1 name='dis_h0_conv'))
-        h0_pool = MaxPooling(h0, [2, 2]) 
-        h1 = lrelu(batch_norm(conv2d(h0_pool, output_dim=self.df_dim*2, k_h=5, k_w=5,
-                                      d_h=1, d_w=1, name='dis_h1_conv'),"bn1"))
-        h1_pool = MaxPooling(h1, [2, 2]) 
-        h2 = lrelu(batch_norm(conv2d(h1_pool, output_dim=self.df_dim*4,k_h=5, k_w=5,
-                                      d_h=1, d_w=1 name='dis_h2_conv'), "bn2"))
-        h2_pool = MaxPooling(h2, [2, 2]) 
-        h3 = lrelu(batch_norm(conv2d(h2_pool, output_dim=self.df_dim*8,k_h=3, k_w=3,
-                                      d_h=1, d_w=1 name='dis_h3_conv'), "bn3"))
-        h3_pool = MaxPooling(h3, [2, 2]) 
-        h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), 1, 'dis_h3_lin')
+    def discriminator(self, img, name= 'Dis', reuse= False):
+        with tf.variable_scope(name, reuse):
+            h0 = lrelu(conv2d(image, output_dim=self.df_dim,k_h=5, k_w=5,
+                                        d_h=1, d_w=1 name='dis_h0_conv'))
+            h0_pool = MaxPooling(h0, [2, 2]) 
+            h1 = lrelu(batch_norm(conv2d(h0_pool, output_dim=self.df_dim*2, k_h=5, k_w=5,
+                                        d_h=1, d_w=1, name='dis_h1_conv'),"bn1"))
+            h1_pool = MaxPooling(h1, [2, 2]) 
+            h2 = lrelu(batch_norm(conv2d(h1_pool, output_dim=self.df_dim*4,k_h=5, k_w=5,
+                                        d_h=1, d_w=1 name='dis_h2_conv'), "bn2"))
+            h2_pool = MaxPooling(h2, [2, 2]) 
+            h3 = lrelu(batch_norm(conv2d(h2_pool, output_dim=self.df_dim*8,k_h=3, k_w=3,
+                                        d_h=1, d_w=1 name='dis_h3_conv'), "bn3"))
+            h3_pool = MaxPooling(h3, [2, 2]) 
+            h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), 1, 'dis_h3_lin')
 
         return tf.nn.sigmoid(h), h
