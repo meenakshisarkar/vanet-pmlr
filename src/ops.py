@@ -141,7 +141,7 @@ def FixedUnPooling(x, shape):
   return UnPooling2x2ZeroFilled(x)
 
 
-def gdl(gen_frames, gt_frames, alpha):
+def stgdl(gen_frames, gt_frames, alpha):
   """
   Calculates the sum of GDL losses between the predicted and gt frames.
   @param gen_frames: The predicted frames at each scale.
