@@ -54,6 +54,8 @@ class VANET(object):
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
                 real_img= tf.concat(axis=3,[in_img,target_img])
                 fake_img= tf.concat(axis=3,[in_img,gen_img])
+
+                ########Rethink the variable scope part
                 self.D_real_, self.D_logits_real_= self.discriminator(real_img, reuse= dis_reuse)
                 if l==0: dis_reuse= True
                 self.D_fake_, self.D_logits_fake_ = self.discriminator(fake_img, reuse= dis_reuse)
@@ -65,14 +67,42 @@ class VANET(object):
             self.D_logits_real= tf.concat(axis=1, values= _D_logits_real)
             self.D_fake= tf.concat(axis=1, values= _D_fake)
             self.D_logits_fake= tf.concat(axis=1, values= _D_logits_fake)
+
+            #################reconstruction losses
             self.L_p = tf.reduce_mean(
                 tf.square(self.G - self.target[:, :, :, self.K:, :]))
+            self.L_stgdl= stgdl(self.G, self.target[:, :, :, self.K-2:, :],1.0)
+
+            self.reconst_loss= self.L_p+self.L_stgdl
+
+
+            ################# Generative and adversarial losses
             self.d_loss_real = tf.reduce_mean(
                 tf.nn.sigmoid_cross_entropy_with_logits(
-                    logits=self.D_logits, labels=tf.ones_like(self.D)))
+                    logits=self.D_logits_real, labels=tf.ones_like(self.D_real))) 
             self.d_loss_fake = tf.reduce_mean(
                 tf.nn.sigmoid_cross_entropy_with_logits(
-                    logits=self.D_logits_, labels=tf.zeros_like(self.D_)))
+                    logits=self.D_logits_fake, labels=tf.zeros_like(self.D_fake)))
+            self.d_loss= self.d_loss_real+self.d_loss_fake
+
+            self.gen_loss= tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.D_logits_fake, labels=tf.ones_like(self.D_fake)))
+
+            ################## Loss summery
+            self.loss_sum = tf.summary.scalar("reconst_loss", self.reconst_loss)
+            self.L_p_sum = tf.summary.scalar("L_p", self.L_p)
+            self.L_stgdl_sum = tf.summary.scalar("L_stgdl", self.L_stgdl)
+            self.L_GAN_sum = tf.summary.scalar("L_GAN", self.L_GAN)
+            self.d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
+            self.d_loss_real_sum = tf.summary.scalar("d_loss_real", self.d_loss_real)
+            self.d_loss_fake_sum = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
+
+
+
+
+            
+        return
 
 
     def forward_model(self, vel_in, acc_in, xt, vel_LSTM, acc_LSTM):
