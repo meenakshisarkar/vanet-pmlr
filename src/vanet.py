@@ -85,7 +85,7 @@ class VANET(object):
                     logits=self.D_logits_fake, labels=tf.zeros_like(self.D_fake)))
             self.d_loss= self.d_loss_real+self.d_loss_fake
 
-            self.gen_loss= tf.reduce_mean(
+            self.L_gen= tf.reduce_mean(
                 tf.nn.sigmoid_cross_entropy_with_logits(
                     logits=self.D_logits_fake, labels=tf.ones_like(self.D_fake)))
 
@@ -93,16 +93,20 @@ class VANET(object):
             self.loss_sum = tf.summary.scalar("reconst_loss", self.reconst_loss)
             self.L_p_sum = tf.summary.scalar("L_p", self.L_p)
             self.L_stgdl_sum = tf.summary.scalar("L_stgdl", self.L_stgdl)
-            self.L_GAN_sum = tf.summary.scalar("L_GAN", self.L_GAN)
+            self.L_Gen_sum = tf.summary.scalar("L_gen", self.L_gen)
             self.d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
             self.d_loss_real_sum = tf.summary.scalar("d_loss_real", self.d_loss_real)
             self.d_loss_fake_sum = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
 
+            self.t_vars = tf.trainable_variables()
+            self.g_vars = [var for var in self.t_vars if 'Dis' not in var.name]
+            self.d_vars = [var for var in self.t_vars if 'Dis' in var.name]
+            num_param = 0.0
+            for var in self.g_vars:
+                num_param += int(np.prod(var.get_shape()));
+            print("Number of parameters: %d" % num_param)
+        self.saver = tf.train.Saver(max_to_keep=10)
 
-
-
-            
-        return
 
 
     def forward_model(self, vel_in, acc_in, xt, vel_LSTM, acc_LSTM):
@@ -255,7 +259,7 @@ class VANET(object):
         
         return decode_out
 
-    def discriminator(self, img, name= 'Dis', reuse= False):
+    def discriminator(self, image, name= 'Dis', reuse= False):
         with tf.variable_scope(name, reuse):
             h0 = lrelu(conv2d(image, output_dim=self.df_dim,k_h=5, k_w=5,
                                         d_h=1, d_w=1 name='dis_h0_conv'))
