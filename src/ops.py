@@ -177,7 +177,23 @@ def stgdl(gen_frames, gt_frames, alpha):
   grad_diff_t = tf.abs(gt_dt-gen_dt)
   grad_diff_t= tf.reshape(grad_diff_t,[-1, image_size, image_size,3])
 
-  stgdl_loss = tf.reduce_mean((grad_diff_t** + grad_diff_x ** alpha + grad_diff_y ** alpha))
+  spatial_loss = tf.reduce_mean((grad_diff_t** + grad_diff_x ** alpha + grad_diff_y ** alpha))
+
+  gen_ddx = tf.abs(tf.nn.conv2d(gen_dx, filter_x, strides1, padding=padding))
+  gen_ddy = tf.abs(tf.nn.conv2d(gen_dy, filter_y, strides1, padding=padding))
+  gen_ddt = tf.abs(tf.nn.conv3d(gen_dt, filter_t, strides2, padding=padding))
+  gt_ddx = tf.abs(tf.nn.conv2d(gt_dx, filter_x, strides1, padding=padding))
+  gt_ddy = tf.abs(tf.nn.conv2d(gt_dy, filter_y, strides1, padding=padding))
+  gt_ddt = tf.abs(tf.nn.conv3d(gt_dt, filter_t, strides2, padding=padding))
+
+  grad_diff_dx = tf.abs(gt_ddx - gen_ddx)
+  grad_diff_dy = tf.abs(gt_ddy - gen_ddy)
+  grad_diff_dt = tf.abs(gt_ddt - gen_ddt)
+  grad_diff_dt = tf.reshape(grad_diff_ddt, [-1, image_size, image_size, 3])
+
+  velocity_loss = tf.reduce_mean((grad_diff_dt ** + grad_diff_dx ** alpha + grad_diff_dy ** alpha))
+
+  stgdl_loss= spatial_loss+velocity_loss
 
   # condense into one tensor and avg
   return stgdl_loss
