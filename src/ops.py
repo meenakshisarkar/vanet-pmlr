@@ -157,21 +157,30 @@ def stgdl(gen_frames, gt_frames, alpha):
   filter_x = tf.expand_dims(tf.stack([neg, pos]), 0)
   # [[1],[-1]]
   filter_y = tf.stack([tf.expand_dims(pos, 0), tf.expand_dims(neg, 0)])
-  strides = [1, 1, 1, 1]  # stride of (1, 1)
+
+  filter_t = tf.stack([tf.expand_dims(tf.expand_dims(neg,0),0), tf.expand_dims(tf.expand_dims(pos,0),0)])
+  strides1 = [1, 1, 1, 1]  # stride of (1, 1)
+  strides2= [1, 1, 1, 1, 1] #stride of (1,1,1) for conv3D
   padding = 'SAME'
 
-  gen_dx = tf.abs(tf.nn.conv2d(gen_frames, filter_x, strides, padding=padding))
-  gen_dy = tf.abs(tf.nn.conv2d(gen_frames, filter_y, strides, padding=padding))
-  gt_dx = tf.abs(tf.nn.conv2d(gt_frames, filter_x, strides, padding=padding))
-  gt_dy = tf.abs(tf.nn.conv2d(gt_frames, filter_y, strides, padding=padding))
+
+
+  gen_dx = tf.abs(tf.nn.conv2d(gen_frames, filter_x, strides1, padding=padding))
+  gen_dy = tf.abs(tf.nn.conv2d(gen_frames, filter_y, strides1, padding=padding))
+  gen_dt = tf.abs(tf.nn.conv3d(gen_frames, filter_t,strides2, padding=padding))
+  gt_dx = tf.abs(tf.nn.conv2d(gt_frames, filter_x, strides1, padding=padding))
+  gt_dy = tf.abs(tf.nn.conv2d(gt_frames, filter_y, strides1, padding=padding))
+  gt_dt = tf.abs(tf.nn.conv3d(gt_frames, filter_t, strides2, padding=padding))
 
   grad_diff_x = tf.abs(gt_dx - gen_dx)
   grad_diff_y = tf.abs(gt_dy - gen_dy)
+  grad_diff_t = tf.abs(gt_dt-gen_dt)
+  grad_diff_t= tf.reshape(grad_diff_t,[-1, image_size, image_size,3])
 
-  gdl_loss = tf.reduce_mean((grad_diff_x ** alpha + grad_diff_y ** alpha))
+  stgdl_loss = tf.reduce_mean((grad_diff_t** + grad_diff_x ** alpha + grad_diff_y ** alpha))
 
   # condense into one tensor and avg
-  return gdl_loss
+  return stgdl_loss
 
 
 def linear(input_, output_size, name, stddev=0.02, bias_start=0.0,
