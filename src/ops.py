@@ -12,11 +12,11 @@ def batch_norm(inputs, name, train=True, reuse=False):
   return tf.contrib.layers.batch_norm(inputs=inputs,is_training=train,
                                       reuse=reuse,scope=name,scale=True)
 
-def convOp(input, kernal, reuse=Flase,name=None):
+def convOp(input, kernal, reuse=False,name=None):
     with tf.variable_scope(name, reuse=reuse):
         return tf.nn.convolution(input, kernal, padding= 'SAME', strides= [1,1,1,1] )
 
-def convolution()
+
 
 def conv2d(input_, output_dim, 
             k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.02,
@@ -141,7 +141,7 @@ def FixedUnPooling(x, shape):
   return UnPooling2x2ZeroFilled(x)
 
 
-def stgdl(gen_frames, gt_frames, alpha):
+def stgdl(gen_frames, gt_frames, alpha, image_size):
   """
   Calculates the sum of GDL losses between the predicted and gt frames.
   @param gen_frames: The predicted frames at each scale.
@@ -157,27 +157,30 @@ def stgdl(gen_frames, gt_frames, alpha):
   filter_x = tf.expand_dims(tf.stack([neg, pos]), 0)
   # [[1],[-1]]
   filter_y = tf.stack([tf.expand_dims(pos, 0), tf.expand_dims(neg, 0)])
-
+  # [[[-1]],[[1]]]
   filter_t = tf.stack([tf.expand_dims(tf.expand_dims(neg,0),0), tf.expand_dims(tf.expand_dims(pos,0),0)])
   strides1 = [1, 1, 1, 1]  # stride of (1, 1)
   strides2= [1, 1, 1, 1, 1] #stride of (1,1,1) for conv3D
   padding = 'SAME'
 
-
+  gen_dt = tf.abs(tf.nn.conv3d(gen_frames, filter_t,strides2, padding=padding))
+  gt_dt = tf.abs(tf.nn.conv3d(gt_frames, filter_t, strides2, padding=padding))
+  gen_frames= tf.reshape(gen_frames, [-1, image_size,image_size,3])
+  gt_frames= tf.reshape(gt_frames, [-1, image_size,image_size,3])
 
   gen_dx = tf.abs(tf.nn.conv2d(gen_frames, filter_x, strides1, padding=padding))
   gen_dy = tf.abs(tf.nn.conv2d(gen_frames, filter_y, strides1, padding=padding))
   gen_dt = tf.abs(tf.nn.conv3d(gen_frames, filter_t,strides2, padding=padding))
   gt_dx = tf.abs(tf.nn.conv2d(gt_frames, filter_x, strides1, padding=padding))
   gt_dy = tf.abs(tf.nn.conv2d(gt_frames, filter_y, strides1, padding=padding))
-  gt_dt = tf.abs(tf.nn.conv3d(gt_frames, filter_t, strides2, padding=padding))
+  
 
   grad_diff_x = tf.abs(gt_dx - gen_dx)
   grad_diff_y = tf.abs(gt_dy - gen_dy)
   grad_diff_t = tf.abs(gt_dt-gen_dt)
   grad_diff_t= tf.reshape(grad_diff_t,[-1, image_size, image_size,3])
 
-  spatial_loss = tf.reduce_mean((grad_diff_t** + grad_diff_x ** alpha + grad_diff_y ** alpha))
+  spatial_loss = tf.reduce_mean((grad_diff_t**alpha + grad_diff_x ** alpha + grad_diff_y ** alpha))
 
   gen_ddx = tf.abs(tf.nn.conv2d(gen_dx, filter_x, strides1, padding=padding))
   gen_ddy = tf.abs(tf.nn.conv2d(gen_dy, filter_y, strides1, padding=padding))
@@ -189,9 +192,9 @@ def stgdl(gen_frames, gt_frames, alpha):
   grad_diff_dx = tf.abs(gt_ddx - gen_ddx)
   grad_diff_dy = tf.abs(gt_ddy - gen_ddy)
   grad_diff_dt = tf.abs(gt_ddt - gen_ddt)
-  grad_diff_dt = tf.reshape(grad_diff_ddt, [-1, image_size, image_size, 3])
+  grad_diff_dt = tf.reshape(grad_diff_dt, [-1, image_size, image_size, 3])
 
-  velocity_loss = tf.reduce_mean((grad_diff_dt ** + grad_diff_dx ** alpha + grad_diff_dy ** alpha))
+  velocity_loss = tf.reduce_mean((grad_diff_dt**alpha + grad_diff_dx ** alpha + grad_diff_dy ** alpha))
 
   stgdl_loss= spatial_loss+velocity_loss
 

@@ -70,8 +70,8 @@ class VANET(object):
 
             #################reconstruction losses
             self.L_p = tf.reduce_mean(
-                tf.square(self.G - self.target[:, :, :, self.K:, :]))
-            self.L_stgdl= stgdl(self.G, self.target[:, :, :, self.K-2:, :],1.0)
+                tf.square(self.G - self.target[:, self.K:, :, :, :]))
+            self.L_stgdl= stgdl(self.G, self.target[:,self.K:, :, :,  :],1.0)
 
             self.reconst_loss= self.L_p+self.L_stgdl
 
@@ -103,7 +103,7 @@ class VANET(object):
             self.d_vars = [var for var in self.t_vars if 'Dis' in var.name]
             num_param = 0.0
             for var in self.g_vars:
-                num_param += int(np.prod(var.get_shape()));
+                num_param += int(np.prod(var.get_shape()))
             print("Number of parameters: %d" % num_param)
         self.saver = tf.train.Saver(max_to_keep=10)
 
@@ -276,3 +276,28 @@ class VANET(object):
             h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), 1, 'dis_h3_lin')
 
         return tf.nn.sigmoid(h), h
+
+    def save(self, sess, checkpoint_dir, step):
+        model_name = "VANET.model"
+
+        if not os.path.exists(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+
+        self.saver.save(sess,
+                        os.path.join(checkpoint_dir, model_name),
+                        global_step=step)
+    
+
+
+    def load(self, sess, checkpoint_dir, model_name=None):
+        print(" [*] Reading checkpoints...")
+
+        ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
+        if ckpt and ckpt.model_checkpoint_path:
+            ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
+            if model_name is None: model_name = ckpt_name
+            self.saver.restore(sess, os.path.join(checkpoint_dir, model_name))
+            print("     Loaded model: "+str(model_name))
+            return True, model_name
+        else:
+            return False, None
