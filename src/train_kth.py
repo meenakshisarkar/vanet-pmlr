@@ -8,7 +8,7 @@ import scipy.misc as sm
 import numpy as np
 import scipy.io as sio
 
-from mcnet import MCNET
+from VANET import VANET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -25,7 +25,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
   updateD = True
   updateG = True
   iters = 0
-  prefix  = ("KTH_MCNET"
+  prefix  = ("KTH_VANET"
           + "_image_size="+str(image_size)
           + "_K="+str(K)
           + "_T="+str(T)
@@ -45,9 +45,9 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     makedirs(samples_dir)
   if not exists(summary_dir):
     makedirs(summary_dir)
-
+ ####################### make provision for cpu running
   with tf.device("/gpu:%d"%gpu[0]):
-    model = MCNET(image_size=[image_size,image_size], c_dim=1,
+    model = VANET(image_size=[image_size,image_size], c_dim=1,
                   K=K, batch_size=batch_size, T=T,
                   checkpoint_dir=checkpoint_dir)
     d_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
@@ -84,10 +84,12 @@ def main(lr, batch_size, alpha, beta, image_size, K,
         mini_batches = get_minibatches_idx(len(trainfiles), batch_size, shuffle=True)
         for _, batchidx in mini_batches:
           if len(batchidx) == batch_size:
-            seq_batch  = np.zeros((batch_size, image_size, image_size,
-                                   K+T, 1), dtype="float32")
-            diff_batch = np.zeros((batch_size, image_size, image_size,
-                                   K-1, 1), dtype="float32")
+            seq_batch  = np.zeros((batch_size, K+T, image_size, image_size,
+                                    1), dtype="float32")
+            diff_batch = np.zeros((batch_size,K-1, image_size, image_size,
+                                    1), dtype="float32")
+            accel_batch = np.zeros((batch_size,K-2, image_size, image_size,
+                                    1), dtype="float32")
             t0 = time.time()
             Ts = np.repeat(np.array([T]),batch_size,axis=0)
             Ks = np.repeat(np.array([K]),batch_size,axis=0)
@@ -102,7 +104,8 @@ def main(lr, batch_size, alpha, beta, image_size, K,
             for i in xrange(batch_size):
               seq_batch[i] = output[i][0]
               diff_batch[i] = output[i][1]
-
+              accel_batch[i] = output[i][2]
+###################### need to change the input to the model and the indexing of the input images needs to be correct.
             if updateD:
               _, summary_str = sess.run([d_optim, d_sum],
                                          feed_dict={model.diff_in: diff_batch,
