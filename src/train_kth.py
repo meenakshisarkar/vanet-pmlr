@@ -8,7 +8,7 @@ import scipy.misc as sm
 import numpy as np
 import scipy.io as sio
 
-from VANET import VANET
+from vanet import VANET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -45,22 +45,24 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     makedirs(samples_dir)
   if not exists(summary_dir):
     makedirs(summary_dir)
- ####################### make provision for cpu running
-  with tf.device("/gpu:%d"%gpu[0]):
+
+  gpus= tf.config.experimental.list_physical_devices('GPU')           #checking for GPU availability
+
+
+  with tf.device("/gpu:%d"%gpu[0] if gpus else "/cpu:0"):             #Selecting cpu or gpu
     model = VANET(image_size=[image_size,image_size], c_dim=1,
                   K=K, batch_size=batch_size, T=T,
                   checkpoint_dir=checkpoint_dir)
     d_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
-        model.d_loss, var_list=model.d_vars
-    )
+        model.d_loss, var_list=model.d_vars)
     g_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
-        alpha*model.L_img+beta*model.L_GAN, var_list=model.g_vars
-    )
+        alpha*model.reconst_loss+beta*model.L_gen, var_list=model.g_vars)
+
 
   gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
                   log_device_placement=False,
-                  gpu_options=gpu_options)) as sess:
+                  gpu_options=gpu_options if gpus else None)) as sess:
 
     tf.global_variables_initializer().run()
 
@@ -70,10 +72,10 @@ def main(lr, batch_size, alpha, beta, image_size, K,
       print(" [!] Load failed...")
 
     g_sum = tf.summary.merge([model.L_p_sum,
-                              model.L_gdl_sum, model.loss_sum,
-                              model.L_GAN_sum])
-    d_sum = tf.summary.merge([model.d_loss_real_sum, model.d_loss_sum,
-                              model.d_loss_fake_sum])
+                              model.L_stgdl_sum, model.L_sum,
+                              model.L_Gen_sum])
+    d_sum = tf.summary.merge([model.d_loss_real_sum,
+                              model.d_loss_fake_sum, model.d_loss_sum])
     writer = tf.summary.FileWriter(summary_dir, sess.graph)
 
     counter = iters+1
@@ -108,27 +110,32 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 ###################### need to change the input to the model and the indexing of the input images needs to be correct.
             if updateD:
               _, summary_str = sess.run([d_optim, d_sum],
-                                         feed_dict={model.diff_in: diff_batch,
-                                                    model.xt: seq_batch[:,:,:,K-1],
+                                         feed_dict={model.velocity: diff_batch,
+                                                    model.accelaration: accel_batch,
+                                                    model.xt: seq_batch[K-1,:,:,:],
                                                     model.target: seq_batch})
               writer.add_summary(summary_str, counter)
 
             if updateG:
               _, summary_str = sess.run([g_optim, g_sum],
-                                         feed_dict={model.diff_in: diff_batch,
-                                                    model.xt: seq_batch[:,:,:,K-1],
+                                         feed_dict={model.velocity: diff_batch,
+                                                    model.accelaration: accel_batch,
+                                                    model.xt: seq_batch[K-1,:,:,:],
                                                     model.target: seq_batch})
               writer.add_summary(summary_str, counter)
 
-            errD_fake = model.d_loss_fake.eval({model.diff_in: diff_batch,
-                                                model.xt: seq_batch[:,:,:,K-1],
-                                                model.target: seq_batch})
-            errD_real = model.d_loss_real.eval({model.diff_in: diff_batch,
-                                                model.xt: seq_batch[:,:,:,K-1],
-                                                model.target: seq_batch})
-            errG = model.L_GAN.eval({model.diff_in: diff_batch,
-                                     model.xt: seq_batch[:,:,:,K-1],
-                                     model.target: seq_batch})
+            errD_fake = model.d_loss_fake.eval({model.velocity: diff_batch,
+                                                  model.accelaration: accel_batch,
+                                                  model.xt: seq_batch[K-1,:,:,:],
+                                                  model.target: seq_batch})
+            errD_real = model.d_loss_real.eval({model.velocity: diff_batch,
+                                                  model.accelaration: accel_batch,
+                                                  model.xt: seq_batch[K-1,:,:,:],
+                                                  model.target: seq_batch})
+            errG = model.L_gen.eval({model.velocity: diff_batch,
+                                          model.accelaration: accel_batch,
+                                          model.xt: seq_batch[K-1,:,:,:],
+                                          model.target: seq_batch})
 
             if errD_fake < margin or errD_real < margin:
               updateD = False
@@ -147,9 +154,10 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
             if np.mod(counter, 100) == 1:
               samples = sess.run([model.G],
-                                  feed_dict={model.diff_in: diff_batch,
-                                             model.xt: seq_batch[:,:,:,K-1],
-                                             model.target: seq_batch})[0]
+                                  feed_dict={model.velocity: diff_batch,
+                                          model.accelaration: accel_batch,
+                                          model.xt: seq_batch[K-1,:,:,:],
+                                          model.target: seq_batch})[0]
               samples = samples[0].swapaxes(0,2).swapaxes(1,2)
               sbatch  = seq_batch[0,:,:,K:].swapaxes(0,2).swapaxes(1,2)
               samples = np.concatenate((samples,sbatch), axis=0)

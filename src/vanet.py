@@ -90,7 +90,7 @@ class VANET(object):
                     logits=self.D_logits_fake, labels=tf.ones_like(self.D_fake)))
 
             ################## Loss summery
-            self.loss_sum = tf.summary.scalar("reconst_loss", self.reconst_loss)
+            self.L_sum = tf.summary.scalar("reconst_loss", self.reconst_loss)
             self.L_p_sum = tf.summary.scalar("L_p", self.L_p)
             self.L_stgdl_sum = tf.summary.scalar("L_stgdl", self.L_stgdl)
             self.L_Gen_sum = tf.summary.scalar("L_gen", self.L_gen)
