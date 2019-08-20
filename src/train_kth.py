@@ -46,13 +46,15 @@ def main(lr, batch_size, alpha, beta, image_size, K,
   if not exists(summary_dir):
     makedirs(summary_dir)
 
-  gpus= tf.config.experimental.list_physical_devices('GPU')           #checking for GPU availability
+  if gpu==0:
+    gpus= False           #checking for GPU availability
+  else: 
+    gpus= True
 
 
   with tf.device("/gpu:%d"%gpu[0] if gpus else "/cpu:0"):             #Selecting cpu or gpu
     model = VANET(image_size=[image_size,image_size], c_dim=1,
-                  K=K, batch_size=batch_size, T=T,
-                  checkpoint_dir=checkpoint_dir)
+                  timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
     d_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
         model.d_loss, var_list=model.d_vars)
     g_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
@@ -158,8 +160,8 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                                           model.accelaration: accel_batch,
                                           model.xt: seq_batch[K-1,:,:,:],
                                           model.target: seq_batch})[0]
-              samples = samples[0].swapaxes(0,2).swapaxes(1,2)
-              sbatch  = seq_batch[0,:,:,K:].swapaxes(0,2).swapaxes(1,2)
+              samples = samples[0]
+              sbatch  = seq_batch[0,K:,:,:]
               samples = np.concatenate((samples,sbatch), axis=0)
               print("Saving sample ...")
               save_images(samples[:,:,:,::-1], [2, T], 
@@ -186,9 +188,9 @@ if __name__ == "__main__":
   parser.add_argument("--T", type=int, dest="T",
                       default=10, help="Number of steps into the future")
   parser.add_argument("--num_iter", type=int, dest="num_iter",
-                      default=100000, help="Number of iterations")
-  parser.add_argument("--gpu", type=int, nargs="+", dest="gpu", required=True,
-                      help="GPU device id")
+                      default=100, help="Number of iterations")
+  parser.add_argument("--gpu", type=int, nargs="+", dest="gpu", required=False,
+                      default=0, help="GPU device id")
 
   args = parser.parse_args()
   main(**vars(args))

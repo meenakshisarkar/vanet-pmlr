@@ -46,14 +46,14 @@ class VANET(object):
             _D_fake =[]
             _D_logits_fake =[]
             for l in xrange(self.F):
-                in_img=tf.reshape(tf.transpose(self.target(:,self.timesteps+l-2:self.timesteps+l,:,:,:), [0,2,3,1,4]),
+                in_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l-2:self.timesteps+l,:,:,:], [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                target_img=tf.reshape(tf.transpose(self.target(:,self.timesteps+l,:,:,:), [0,2,3,1,4]),
+                target_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l,:,:,:], [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                gen_img=tf.reshape(tf.transpose(self.predict(:,l,:,:,:), [0,2,3,1,4]),
+                gen_img=tf.reshape(tf.transpose(self.predict[:,l,:,:,:], [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                real_img= tf.concat(axis=3,[in_img,target_img])
-                fake_img= tf.concat(axis=3,[in_img,gen_img])
+                real_img= tf.concat([in_img,target_img],axis=3)
+                fake_img= tf.concat([in_img,gen_img],axis=3)
 
                 ########Rethink the variable scope part
                 self.D_real_, self.D_logits_real_= self.discriminator(real_img, reuse= dis_reuse)
@@ -130,8 +130,8 @@ class VANET(object):
                 cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out, reuse= False)
                 res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in, reuse= False)
                 x_tilda= self.dec_layer(cont_conv,res_conv, reuse = False)
-                vel_in= tf.reshape(vel_in[:,self.timesteps - 2,:,:,:], [self.batch_size,:,:,:])
-                acc_in= tf.reshape(acc_in[:,self.timesteps - 3,:,:,:], [self.batch_size,:,:,:])
+                vel_in = tf.squeeze(vel_in[:,self.timesteps-2,:,:,:], [1])
+                acc_in = tf.squeeze(acc_in[:,self.timesteps-3,:,:,:], [1])
             else:
                 h_vel_out, vel_state, vel_res_in = self.vel_enc(vel_in, vel_state, vel_LSTM, reuse=reuse_vel)
                 h_acc_out, acc_state, acc_res_in = self.acc_enc(acc_in, acc_state, acc_LSTM, reuse=reuse_acc)
@@ -154,17 +154,18 @@ class VANET(object):
         conv1 = relu(conv2d(vel_in, output_dim=self.filters, k_h=5, k_w=5,
                             d_h=1, d_w=1, name='vel_conv1', reuse=reuse))
         vel_res_in.append(conv1)
-        pool1 = MaxPooling(conv1, [2, 2])
+        pool1 = MaxPooling(conv1, [2, 2], stride=2)
 
         conv2 = relu(conv2d(pool1, output_dim=self.filters * 2, k_h=5, k_w=5,
                             d_h=1, d_w=1, name='vel_conv2', reuse=reuse))
         vel_res_in.append(conv2)
-        pool2 = MaxPooling(conv2, [2, 2])
+        pool2 = MaxPooling(conv2, [2, 2], stride=2)
 
         conv3 = relu(conv2d(pool2, output_dim=self.filters * 4, k_h=3, k_w=3,
                             d_h=1, d_w=1, name='vel_conv3', reuse=reuse))
         vel_res_in.append(conv3)
-        pool3 = MaxPooling(conv3, [2, 2])
+        pool3 = MaxPooling(conv3, [2, 2],stride=2)
+        print(pool3.shape)
         h1_state, vel_state = vel_LSTM(pool3, vel_state, scope='vel_lstm1', reuse=reuse)
         h2_state, vel_state = vel_LSTM(h1_state, vel_state, scope='vel_lstm2', reuse=reuse)
         h_vel_out, vel_state = vel_LSTM(h2_state, vel_state, scope='vel_lstm3', reuse=reuse)
@@ -175,17 +176,17 @@ class VANET(object):
         conv1 = relu(conv2d(acc_in, output_dim=self.filters, k_h=5, k_w=5,
                             d_h=1, d_w=1, name='acc_conv1', reuse=reuse))
         acc_res_in.append(conv1)
-        pool1 = MaxPooling(conv1, [2, 2])
+        pool1 = MaxPooling(conv1, [2, 2],stride=2)
 
         conv2 = relu(conv2d(pool1, output_dim=self.filters * 2, k_h=5, k_w=5,
                             d_h=1, d_w=1, name='acc_conv2', reuse=reuse))
         acc_res_in.append(conv2)
-        pool2 = MaxPooling(conv2, [2, 2])
+        pool2 = MaxPooling(conv2, [2, 2],stride=2)
 
         conv3 = relu(conv2d(pool2, output_dim=self.filters * 4, k_h=3, k_w=3,
                             d_h=1, d_w=1, name='acc_conv3', reuse=reuse))
         acc_res_in.append(conv3)
-        pool3 = MaxPooling(conv3, [2, 2])
+        pool3 = MaxPooling(conv3, [2, 2],stride=2)
         h1_state, acc_state = acc_LSTM(pool3, acc_state, scope='acc_lstm1', reuse=reuse)
         h2_state, acc_state = acc_LSTM(h1_state, acc_state, scope='acc_lstm2', reuse=reuse)
         h_acc_out, acc_state = acc_LSTM(h2_state, acc_state, scope='acc_lstm3', reuse=reuse)
@@ -196,17 +197,17 @@ class VANET(object):
         conv1 = relu(conv2d(xt, output_dim=self.filters, k_h=5, k_w=5,
                             d_h=1, d_w=1, name='con_conv1', reuse=reuse))
         con_res_in.append(conv1)               ### 128*128*32
-        pool1 = MaxPooling(conv1, [2, 2])      ####64*64*32
+        pool1 = MaxPooling(conv1, [2, 2],stride=2)      ####64*64*32
 
         conv2 = relu(conv2d(pool1, output_dim=self.filters * 2, k_h=5, k_w=5,
                             d_h=1, d_w=1, name='con_conv2', reuse=reuse))
         con_res_in.append(conv2)               ### 64*64*64
-        pool2 = MaxPooling(conv2, [2, 2])      ### 32*32*64
+        pool2 = MaxPooling(conv2, [2, 2],stride=2)      ### 32*32*64
 
-        conv3 = relu(conv2d(pool2, output_dim=self.filters * 4, k_h=3, k_w=3,0
+        conv3 = relu(conv2d(pool2, output_dim=self.filters * 4, k_h=3, k_w=3,
                             d_h=1, d_w=1, name='con_conv3', reuse=reuse))
         con_res_in.append(conv3)              #### 32*32*128
-        pool3 = MaxPooling(conv3, [2, 2])     #### 16*16*128
+        pool3 = MaxPooling(conv3, [2, 2],stride=2)     #### 16*16*128
         return pool3, con_res_in
 
     def conv_layer(self,h_con_state, h_acc_out, h_vel_out, reuse):
@@ -262,17 +263,17 @@ class VANET(object):
     def discriminator(self, image, name= 'Dis', reuse= False):
         with tf.variable_scope(name, reuse):
             h0 = lrelu(conv2d(image, output_dim=self.df_dim,k_h=5, k_w=5,
-                                        d_h=1, d_w=1 name='dis_h0_conv'))
-            h0_pool = MaxPooling(h0, [2, 2]) 
+                                        d_h=1, d_w=1, name='dis_h0_conv'))
+            h0_pool = MaxPooling(h0, [2, 2],stride=2) 
             h1 = lrelu(batch_norm(conv2d(h0_pool, output_dim=self.df_dim*2, k_h=5, k_w=5,
                                         d_h=1, d_w=1, name='dis_h1_conv'),"bn1"))
-            h1_pool = MaxPooling(h1, [2, 2]) 
+            h1_pool = MaxPooling(h1, [2, 2],stride=2) 
             h2 = lrelu(batch_norm(conv2d(h1_pool, output_dim=self.df_dim*4,k_h=5, k_w=5,
-                                        d_h=1, d_w=1 name='dis_h2_conv'), "bn2"))
-            h2_pool = MaxPooling(h2, [2, 2]) 
+                                        d_h=1, d_w=1, name='dis_h2_conv'), "bn2"))
+            h2_pool = MaxPooling(h2, [2, 2],stride=2) 
             h3 = lrelu(batch_norm(conv2d(h2_pool, output_dim=self.df_dim*8,k_h=3, k_w=3,
-                                        d_h=1, d_w=1 name='dis_h3_conv'), "bn3"))
-            h3_pool = MaxPooling(h3, [2, 2]) 
+                                        d_h=1, d_w=1, name='dis_h3_conv'), "bn3"))
+            h3_pool = MaxPooling(h3, [2, 2],stride=2) 
             h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), 1, 'dis_h3_lin')
 
         return tf.nn.sigmoid(h), h
@@ -284,9 +285,8 @@ class VANET(object):
             os.makedirs(checkpoint_dir)
 
         self.saver.save(sess,
-                        os.path.join(checkpoint_dir, model_name),
-                        global_step=step)
-    
+                    os.path.join(checkpoint_dir, model_name),
+                    global_step=step)
 
 
     def load(self, sess, checkpoint_dir, model_name=None):

@@ -160,5 +160,4 @@ def load_s1m_data(f_name, data_path, trainlist, K, T):
       rep_idx = np.random.randint(low=0, high=len(trainlist))
       f_name = trainlist[rep_idx]
       vid_path = data_path + f_name
-
-return seq, diff
+  return seq, diff
