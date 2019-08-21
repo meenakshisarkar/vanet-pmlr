@@ -110,15 +110,15 @@ class VANET(object):
 
 
     def forward_model(self, vel_in, acc_in, xt, vel_LSTM, acc_LSTM):
-        vel_state = tf.zeros([self.batch_size, self.image_size[0] / 8, self.image_size[1] / 8, 512])
-        acc_state = tf.zeros([self.batch_size, self.image_size[0] / 8, self.image_size[1] / 8, 512])
+        vel_state = tf.zeros([self.batch_size, self.image_size[0] / 8, self.image_size[1] / 8, 256])  #this takes double the no of channels of the state as it concatinates the c and h states of ConvLSTM
+        acc_state = tf.zeros([self.batch_size, self.image_size[0] / 8, self.image_size[1] / 8, 256])
         reuse_vel = False
         reuse_acc= False
 
         # Encoder
         for t in xrange(self.timesteps - 1):
             h_vel_out, vel_state, vel_res_in = self.vel_enc(vel_in[:, t, :, :, :], vel_state, vel_LSTM, reuse=reuse_vel)
-            if t<=self.timesteps-2:
+            if t<self.timesteps-2:
                 h_acc_out, acc_state, acc_res_in = self.acc_enc(acc_in[:, t, :, :, :], acc_state, acc_LSTM, reuse=reuse_acc)
             reuse_vel = True
             reuse_acc = True
@@ -127,7 +127,7 @@ class VANET(object):
         for t in xrange(self.F):
             if t==0:
                 h_con_state, con_res_in= self.content_enc(xt, reuse=False)
-                cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out, reuse= False)
+                cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out,  reuse= False)
                 res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in, reuse= False)
                 x_tilda= self.dec_layer(cont_conv,res_conv, reuse = False)
                 vel_in = tf.squeeze(vel_in[:,self.timesteps-2,:,:,:], [1])
@@ -211,16 +211,17 @@ class VANET(object):
         return pool3, con_res_in
 
     def conv_layer(self,h_con_state, h_acc_out, h_vel_out, reuse):
-        cont_conv1= convOp(h_con_state, h_acc_out, reuse)
-        cont_conv2= convOp(cont_conv1, h_vel_out, reuse)
+        print h_con_state.shape, h_acc_out.shape
+        cont_conv1= convOp(h_con_state, h_acc_out, reuse, name= 'conv_conv1')
+        cont_conv2= convOp(cont_conv1, h_vel_out, reuse,name= 'conv_conv2')
         return cont_conv2
 
     def res_conv_layer(self, con_res_in, acc_res_in, vel_res_in, reuse):
         res_conv_out=[]
         no_layers= len(con_res_in)
         for i in xrange(no_layers):
-            res_conv1= convOp(con_res_in[i], acc_res_in[i], reuse)
-            res_conv2= convOp(res_conv1, vel_res_in[i], reuse)
+            res_conv1= convOp(con_res_in[i], acc_res_in[i] ,reuse,name= 'res_conv1')
+            res_conv2= convOp(res_conv1, vel_res_in[i], reuse,name='res_conv2')
             res_conv_out.append(res_conv2)
         return res_conv_out
             
