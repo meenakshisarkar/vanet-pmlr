@@ -1,7 +1,8 @@
-
+import sys
 import math
 import numpy as np 
 import tensorflow as tf
+from joblib import Parallel, delayed
 
 from tensorflow.python.framework import ops
 
@@ -12,9 +13,22 @@ def batch_norm(inputs, name, train=True, reuse=False):
   return tf.contrib.layers.batch_norm(inputs=inputs,is_training=train,
                                       reuse=reuse,scope=name,scale=True)
 
+def cross_conv(input,kernal, reuse=False, name= None, padding= 'SAME'):
+  input= input[:,:,:,:, tf.newaxis]
+  kernal= tf.squeeze(kernal[:,:,:,:], [0])
+  kernal= kernal[:,:, tf.newaxis, tf.newaxis, :]
+  with tf.variable_scope(name, reuse=reuse):
+        return tf.nn.convolution(input, kernal, padding= padding)
+
+
+
 def convOp(input, kernal, reuse=False,name=None):
-    with tf.variable_scope(name, reuse=reuse):
-        return tf.nn.convolution(input, kernal, padding= 'SAME', strides= [1,1,1,1] )
+  with Parallel(n_jobs= input.shape[0]) as parallel:
+    output= parallel(delayed(cross_conv)(_in, _K, reuse, name, padding='SAME') 
+                                                      for _in, _K in zip(input, kernal))
+  return output
+
+    
 
 
 
