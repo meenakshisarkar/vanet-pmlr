@@ -9,24 +9,34 @@ from tensorflow.python.framework import ops
 from utils import *
 
 
+
+
 def batch_norm(inputs, name, train=True, reuse=False):
   return tf.contrib.layers.batch_norm(inputs=inputs,is_training=train,
                                       reuse=reuse,scope=name,scale=True)
 
 def cross_conv(input,kernal, reuse=False, name= None, padding= 'SAME'):
-  input= input[:,:,:,:, tf.newaxis]
-  kernal= tf.squeeze(kernal[:,:,:,:], [0])
-  kernal= kernal[:,:, tf.newaxis, tf.newaxis, :]
+  
+  _input= input[tf.newaxis,:,:,:,:]
+  _input= tf.reshape(tf.transpose(_input, [0,2,3,4,1]),[1,_input.shape[2], _input.shape[3],-1])
+  _input= _input[:,:,:,:,tf.newaxis]
+
+  kernal= tf.reshape(tf.transpose(kernal, [1,2,3,0]),[kernal.shape[1], kernal.shape[2],-1])
+  kernal= kernal[:,:,:,tf.newaxis,tf.newaxis]
+  print kernal.shape, _input.shape
   with tf.variable_scope(name, reuse=reuse):
-        return tf.nn.convolution(input, kernal, padding= padding)
+        output= tf.nn.convolution(_input, kernal, padding= padding, data_format= "NDHWC")
+        output= tf.squeeze(output)
+        output= tf.reshape(output,[input.shape[1],input.shape[2],input.shape[3],input.shape[0]])
+        output= tf.transpose(output,[3,0,1,2])
+        print output.shape
+  return output
 
 
 
 def convOp(input, kernal, reuse=False,name=None):
-  with Parallel(n_jobs= input.shape[0]) as parallel:
-    output= parallel(delayed(cross_conv)(_in, _K, reuse, name, padding='SAME') 
-                                                      for _in, _K in zip(input, kernal))
-  return output
+  return cross_conv(input, kernal, reuse, name)
+
 
     
 

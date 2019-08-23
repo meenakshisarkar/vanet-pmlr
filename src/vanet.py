@@ -7,6 +7,7 @@ from ops import *
 from utils import *
 
 
+
 class VANET(object):
     def __init__(self, image_size=[128, 128], batch_size=32, c_dim=3, timesteps=10, F=10,
                  checkpoint_dir=None, training=True):
