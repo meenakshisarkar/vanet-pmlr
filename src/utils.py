@@ -99,14 +99,15 @@ def load_kth_data(f_name, data_path, image_size, K, T):
     if low >= high: print(vid_path)
     stidx = np.random.randint(low=low, high=high)
   seq = np.zeros((K+T, image_size, image_size, 1), dtype="float32")
-  for t in xrange(K+T):
+  # print seq.shape
+  for t in xrange(0,K+T):
     img = cv2.cvtColor(cv2.resize(vid.get_data(stidx+t),
                        (image_size,image_size)),
                        cv2.COLOR_RGB2GRAY)
     seq[t,:,:] = transform(img[:,:,None])
 
-  if flip == 1:
-    seq = seq[:-1,:,:]
+  # if flip == 1:
+  #   seq = seq[:-1,:,:]
 
   diff = np.zeros((K-1, image_size, image_size, 1), dtype="float32")
   for t in xrange(1,K):

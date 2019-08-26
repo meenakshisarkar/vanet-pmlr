@@ -19,6 +19,7 @@ class VANET(object):
         self.checkpoint_dir = checkpoint_dir
         self.is_train = training
         self.filters= 32
+        self.df_dim=32
 
         self.vel_shape = [batch_size, timesteps - 1, image_size[0], image_size[1], c_dim]
         self.acc_shape = [batch_size, timesteps - 2, image_size[0], image_size[1], c_dim]
@@ -49,16 +50,22 @@ class VANET(object):
             for l in xrange(self.F):
                 in_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l-2:self.timesteps+l,:,:,:], [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                target_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l,:,:,:], [0,2,3,1,4]),
+                target_img=tf.reshape(self.target[:,self.timesteps+l,:,:,:],
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                gen_img=tf.reshape(tf.transpose(self.predict[:,l,:,:,:], [0,2,3,1,4]),
+                # target_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l,:,:,:], [0,2,3,1,4]),
+                #                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
+                print self.G.shape
+                gen_img=tf.reshape(self.G[:,l,:,:,:],
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
+                # gen_img=tf.reshape(tf.transpose(self.G[:,l,:,:,:], [0,2,3,1,4]),
+                #                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
                 real_img= tf.concat([in_img,target_img],axis=3)
                 fake_img= tf.concat([in_img,gen_img],axis=3)
 
                 ########Rethink the variable scope part
                 self.D_real_, self.D_logits_real_= self.discriminator(real_img, reuse= dis_reuse)
-                if l==0: dis_reuse= True
+                if l==0: 
+                    dis_reuse= True
                 self.D_fake_, self.D_logits_fake_ = self.discriminator(fake_img, reuse= dis_reuse)
                 _D_real.append(self.D_real_)
                 _D_logits_real.append(self.D_logits_real_)
@@ -71,8 +78,8 @@ class VANET(object):
 
             #################reconstruction losses
             self.L_p = tf.reduce_mean(
-                tf.square(self.G - self.target[:, self.K:, :, :, :]))
-            self.L_stgdl= stgdl(self.G, self.target[:,self.K:, :, :,  :],1.0)
+                tf.square(self.G - self.target[:, self.timesteps:, :, :, :]))
+            self.L_stgdl= stgdl(self.G, self.target[:,self.timesteps:, :, :,  :],1.0, self.image_size[0],channel_no=1)
 
             self.reconst_loss= self.L_p+self.L_stgdl
 
@@ -131,9 +138,14 @@ class VANET(object):
                 cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out,  reuse= False)
                 res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in, reuse= False)
                 x_tilda= self.dec_layer(cont_conv,res_conv, reuse = False)
-                vel_in = tf.squeeze(vel_in[:,self.timesteps-2,:,:,:], [1])
-                acc_in = tf.squeeze(acc_in[:,self.timesteps-3,:,:,:], [1])
+                print("I crossed decoding for t==0 layer")
+                print vel_in.shape
+                vel_in = vel_in[:,self.timesteps-2,:,:,:]
+                acc_in = acc_in[:,self.timesteps-3,:,:,:]
+                # vel_in = tf.squeeze(vel_in[:,self.timesteps-2,:,:,:], [1])
+                # acc_in = tf.squeeze(acc_in[:,self.timesteps-3,:,:,:], [1])
             else:
+                print("I started t==1")
                 h_vel_out, vel_state, vel_res_in = self.vel_enc(vel_in, vel_state, vel_LSTM, reuse=reuse_vel)
                 h_acc_out, acc_state, acc_res_in = self.acc_enc(acc_in, acc_state, acc_LSTM, reuse=reuse_acc)
                 h_con_state, con_res_in= self.content_enc(xt, reuse=True)
@@ -212,7 +224,7 @@ class VANET(object):
         return pool3, con_res_in
 
     def conv_layer(self,h_con_state, h_acc_out, h_vel_out, reuse):
-        print h_con_state.shape, h_acc_out.shape
+        # print h_con_state.shape, h_acc_out.shape
         cont_conv1= convOp(h_con_state, h_acc_out, reuse, name= 'conv_conv1')
         cont_conv2= convOp(cont_conv1, h_vel_out, reuse,name= 'conv_conv2')
         return cont_conv2
@@ -263,20 +275,21 @@ class VANET(object):
         return decode_out
 
     def discriminator(self, image, name= 'Dis', reuse= False):
+        print reuse
         with tf.variable_scope(name, reuse):
             h0 = lrelu(conv2d(image, output_dim=self.df_dim,k_h=5, k_w=5,
-                                        d_h=1, d_w=1, name='dis_h0_conv'))
+                                        d_h=1, d_w=1, name='dis_h0_conv', reuse=reuse))
             h0_pool = MaxPooling(h0, [2, 2],stride=2) 
             h1 = lrelu(batch_norm(conv2d(h0_pool, output_dim=self.df_dim*2, k_h=5, k_w=5,
-                                        d_h=1, d_w=1, name='dis_h1_conv'),"bn1"))
+                                        d_h=1, d_w=1, name='dis_h1_conv',reuse=reuse),reuse=reuse, name="bn1"))
             h1_pool = MaxPooling(h1, [2, 2],stride=2) 
             h2 = lrelu(batch_norm(conv2d(h1_pool, output_dim=self.df_dim*4,k_h=5, k_w=5,
-                                        d_h=1, d_w=1, name='dis_h2_conv'), "bn2"))
+                                        d_h=1, d_w=1, name='dis_h2_conv',reuse=reuse),reuse=reuse, name="bn2"))
             h2_pool = MaxPooling(h2, [2, 2],stride=2) 
             h3 = lrelu(batch_norm(conv2d(h2_pool, output_dim=self.df_dim*8,k_h=3, k_w=3,
-                                        d_h=1, d_w=1, name='dis_h3_conv'), "bn3"))
+                                        d_h=1, d_w=1, name='dis_h3_conv',reuse=reuse),reuse=reuse, name="bn3"))
             h3_pool = MaxPooling(h3, [2, 2],stride=2) 
-            h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), 1, 'dis_h3_lin')
+            h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), 1, reuse=reuse, name='dis_h3_lin')
 
         return tf.nn.sigmoid(h), h
 
@@ -295,7 +308,9 @@ class VANET(object):
         print(" [*] Reading checkpoints...")
 
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
+        # print ckpt, ckpt.model_checkpoint_path
         if ckpt and ckpt.model_checkpoint_path:
+            print "I am inside checkpoint"
             ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
             if model_name is None: model_name = ckpt_name
             self.saver.restore(sess, os.path.join(checkpoint_dir, model_name))
