@@ -37,6 +37,11 @@ def cross_conv(input,kernal, reuse=False, name= None, padding= 'SAME'):
 def convOp(input, kernal, reuse=False,name=None):
   return cross_conv(input, kernal, reuse, name)
 
+def convOp_mod(input, kernal, reuse=False,name=None):
+  with tf.variable_scope(name):
+    return input+kernal
+
+  
 
     
 

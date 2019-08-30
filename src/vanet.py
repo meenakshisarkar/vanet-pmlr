@@ -5,7 +5,7 @@ import numpy as np
 from BasicConvLSTMCell import BasicConvLSTMCell
 from ops import *
 from utils import *
-
+import tensorflow.contrib.slim as slim
 
 
 class VANET(object):
@@ -47,34 +47,47 @@ class VANET(object):
             _D_logits_real=[]
             _D_fake =[]
             _D_logits_fake =[]
-            for l in xrange(self.F):
-                in_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l-2:self.timesteps+l,:,:,:], [0,2,3,1,4]),
+            _Dis_in_img=tf.reshape(tf.transpose(self.target[:,:self.timesteps,:,:,:], [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                target_img=tf.reshape(self.target[:,self.timesteps+l,:,:,:],
+            _Dis_target_img=tf.reshape(tf.transpose(self.target[:,self.timesteps:self.timesteps+self.F,:,:,:],[0,2,3,4,1]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                # target_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l,:,:,:], [0,2,3,1,4]),
-                #                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                print self.G.shape
-                gen_img=tf.reshape(self.G[:,l,:,:,:],
+            _Dis_gen_img=tf.reshape(tf.transpose(self.G, [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                # gen_img=tf.reshape(tf.transpose(self.G[:,l,:,:,:], [0,2,3,1,4]),
-                #                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-                real_img= tf.concat([in_img,target_img],axis=3)
-                fake_img= tf.concat([in_img,gen_img],axis=3)
+            _Dis_real_img= tf.concat([_Dis_in_img,_Dis_target_img],axis=3)
+            _Dis_fake_img= tf.concat([_Dis_in_img,_Dis_gen_img],axis=3)
+            self.D_real_, self.D_logits_real_= self.discriminator(_Dis_real_img, reuse= dis_reuse) 
+            print self.D_real_.shape
+            dis_reuse= True
+            self.D_fake_, self.D_logits_fake_ = self.discriminator(_Dis_fake_img, reuse= dis_reuse)
 
-                ########Rethink the variable scope part
-                self.D_real_, self.D_logits_real_= self.discriminator(real_img, reuse= dis_reuse)
-                if l==0: 
-                    dis_reuse= True
-                self.D_fake_, self.D_logits_fake_ = self.discriminator(fake_img, reuse= dis_reuse)
-                _D_real.append(self.D_real_)
-                _D_logits_real.append(self.D_logits_real_)
-                _D_fake.append(self.D_fake_)
-                _D_logits_fake.append(self.D_logits_fake_)
-            self.D_real= tf.concat(axis=1, values= _D_real)
-            self.D_logits_real= tf.concat(axis=1, values= _D_logits_real)
-            self.D_fake= tf.concat(axis=1, values= _D_fake)
-            self.D_logits_fake= tf.concat(axis=1, values= _D_logits_fake)
+            # for l in xrange(self.F):
+            #     in_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l-2:self.timesteps+l,:,:,:], [0,2,3,1,4]),
+            #                                 [self.batch_size,self.image_size[0], self.image_size[1],-1])
+            #     target_img=tf.reshape(self.target[:,self.timesteps+l,:,:,:],
+            #                                 [self.batch_size,self.image_size[0], self.image_size[1],-1])
+            #     # target_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l,:,:,:], [0,2,3,1,4]),
+            #     #                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
+            #     print self.G.shape
+            #     gen_img=tf.reshape(self.G[:,l,:,:,:],
+            #                                 [self.batch_size,self.image_size[0], self.image_size[1],-1])
+            #     # gen_img=tf.reshape(tf.transpose(self.G[:,l,:,:,:], [0,2,3,1,4]),
+            #     #                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
+            #     real_img= tf.concat([in_img,target_img],axis=3)
+            #     fake_img= tf.concat([in_img,gen_img],axis=3)
+
+            #     ########Rethink the variable scope part
+            #     self.D_real_, self.D_logits_real_= self.discriminator(real_img, reuse= dis_reuse)
+            #     if l==0: 
+            #         dis_reuse= True
+            #     self.D_fake_, self.D_logits_fake_ = self.discriminator(fake_img, reuse= dis_reuse)
+            #     _D_real.append(self.D_real_)
+            #     _D_logits_real.append(self.D_logits_real_)
+            #     _D_fake.append(self.D_fake_)
+            #     _D_logits_fake.append(self.D_logits_fake_)
+            self.D_real= tf.concat(axis=1, values=self.D_real_)
+            self.D_logits_real= tf.concat(axis=1, values= self.D_logits_real_)
+            self.D_fake= tf.concat(axis=1, values= self.D_fake_)
+            self.D_logits_fake= tf.concat(axis=1, values= self.D_logits_fake_)
 
             #################reconstruction losses
             self.L_p = tf.reduce_mean(
@@ -107,6 +120,7 @@ class VANET(object):
             self.d_loss_fake_sum = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
 
             self.t_vars = tf.trainable_variables()
+            slim.model_analyzer.analyze_vars(self.t_vars, print_info=True)
             self.g_vars = [var for var in self.t_vars if 'Dis' not in var.name]
             self.d_vars = [var for var in self.t_vars if 'Dis' in var.name]
             num_param = 0.0
@@ -225,8 +239,8 @@ class VANET(object):
 
     def conv_layer(self,h_con_state, h_acc_out, h_vel_out, reuse):
         # print h_con_state.shape, h_acc_out.shape
-        cont_conv1= convOp(h_con_state, h_acc_out, reuse, name= 'conv_conv1')
-        cont_conv2= convOp(cont_conv1, h_vel_out, reuse,name= 'conv_conv2')
+        cont_conv1= convOp_mod(h_con_state, h_acc_out, reuse, name= 'conv_conv1')
+        cont_conv2= convOp_mod(cont_conv1, h_vel_out, reuse,name= 'conv_conv2')
         return cont_conv2
 
     def res_conv_layer(self, con_res_in, acc_res_in, vel_res_in, reuse):
@@ -289,7 +303,7 @@ class VANET(object):
             h3 = lrelu(batch_norm(conv2d(h2_pool, output_dim=self.df_dim*8,k_h=3, k_w=3,
                                         d_h=1, d_w=1, name='dis_h3_conv',reuse=reuse),reuse=reuse, name="bn3"))
             h3_pool = MaxPooling(h3, [2, 2],stride=2) 
-            h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), 1, reuse=reuse, name='dis_h3_lin')
+            h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), self.F, reuse=reuse, name='dis_h3_lin')
 
         return tf.nn.sigmoid(h), h
 

@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 def main(lr, batch_size, alpha, beta, image_size, K,
          T, num_iter, gpu):
   data_path = "../data/KTH/"
-  f = open(data_path+"train_data_list_trimmed.txt","r")
+  f = open(data_path+"train_data_list_trimmed_edited.txt","r")
   trainfiles = f.readlines()
   margin = 0.3 
   updateD = True
@@ -52,7 +52,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     gpus= True
 
 
-  with tf.device("/gpu:%d"%gpu[0] if gpus else "/cpu:0"):             #Selecting cpu or gpu
+  with tf.device("/cpu:0"):             #Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else 
     model = VANET(image_size=[image_size,image_size], c_dim=1,
                   timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
     d_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
@@ -62,16 +62,19 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
 
   gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
-  with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
-                  log_device_placement=False,
-                  gpu_options=gpu_options if gpus else None)) as sess:
+  with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=False,gpu_options=gpu_options if gpus else None)) as sess:                             #(config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=False,gpu_options=gpu_options if gpus else None))
 
     tf.global_variables_initializer().run()
 
-    if model.load(sess, checkpoint_dir):
+    success_load_model=model.load(sess, checkpoint_dir)
+    print success_load_model[0]
+
+    if success_load_model[0]:
       print(" [*] Load SUCCESS")
     else:
       print(" [!] Load failed...")
+
+
 
     g_sum = tf.summary.merge([model.L_p_sum,
                               model.L_stgdl_sum, model.L_sum,
@@ -105,38 +108,45 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                                                                             paths,
                                                                             shapes,
                                                                             Ks, Ts))
+            print seq_batch[1].shape, output[1][0].shape
             for i in xrange(batch_size):
               seq_batch[i] = output[i][0]
               diff_batch[i] = output[i][1]
               accel_batch[i] = output[i][2]
-###################### need to change the input to the model and the indexing of the input images needs to be correct.
+            print "I am at checkpoint batcave"
+###################### need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
+            
             if updateD:
+              print "here there"
               _, summary_str = sess.run([d_optim, d_sum],
                                          feed_dict={model.velocity: diff_batch,
                                                     model.accelaration: accel_batch,
-                                                    model.xt: seq_batch[K-1,:,:,:],
+                                                    model.xt: seq_batch[:,K-1,:,:,:],
                                                     model.target: seq_batch})
+              print "ola"
               writer.add_summary(summary_str, counter)
-
             if updateG:
               _, summary_str = sess.run([g_optim, g_sum],
                                          feed_dict={model.velocity: diff_batch,
                                                     model.accelaration: accel_batch,
-                                                    model.xt: seq_batch[K-1,:,:,:],
+                                                    model.xt: seq_batch[:,K-1,:,:],
                                                     model.target: seq_batch})
               writer.add_summary(summary_str, counter)
+            print "I am at checkpoint gotham"
+
+            
 
             errD_fake = model.d_loss_fake.eval({model.velocity: diff_batch,
                                                   model.accelaration: accel_batch,
-                                                  model.xt: seq_batch[K-1,:,:,:],
+                                                  model.xt: seq_batch[:,K-1,:,:,:],
                                                   model.target: seq_batch})
             errD_real = model.d_loss_real.eval({model.velocity: diff_batch,
                                                   model.accelaration: accel_batch,
-                                                  model.xt: seq_batch[K-1,:,:,:],
+                                                  model.xt: seq_batch[:,K-1,:,:,:],
                                                   model.target: seq_batch})
             errG = model.L_gen.eval({model.velocity: diff_batch,
                                           model.accelaration: accel_batch,
-                                          model.xt: seq_batch[K-1,:,:,:],
+                                          model.xt: seq_batch[:,K-1,:,:,:],
                                           model.target: seq_batch})
 
             if errD_fake < margin or errD_real < margin:
@@ -176,7 +186,7 @@ if __name__ == "__main__":
   parser.add_argument("--lr", type=float, dest="lr",
                       default=0.0001, help="Base Learning Rate")
   parser.add_argument("--batch_size", type=int, dest="batch_size",
-                      default=8, help="Mini-batch size")
+                      default=2, help="Mini-batch size")
   parser.add_argument("--alpha", type=float, dest="alpha",
                       default=1.0, help="Image loss weight")
   parser.add_argument("--beta", type=float, dest="beta",
@@ -184,9 +194,9 @@ if __name__ == "__main__":
   parser.add_argument("--image_size", type=int, dest="image_size",
                       default=128, help="Mini-batch size")
   parser.add_argument("--K", type=int, dest="K",
-                      default=10, help="Number of steps to observe from the past")
+                      default=3, help="Number of steps to observe from the past")
   parser.add_argument("--T", type=int, dest="T",
-                      default=10, help="Number of steps into the future")
+                      default=1, help="Number of steps into the future")
   parser.add_argument("--num_iter", type=int, dest="num_iter",
                       default=100, help="Number of iterations")
   parser.add_argument("--gpu", type=int, nargs="+", dest="gpu", required=False,
