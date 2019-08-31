@@ -115,16 +115,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
               accel_batch[i] = output[i][2]
             print "I am at checkpoint batcave"
 ###################### need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
-            
-            if updateD:
-              print "here there"
-              _, summary_str = sess.run([d_optim, d_sum],
-                                         feed_dict={model.velocity: diff_batch,
-                                                    model.accelaration: accel_batch,
-                                                    model.xt: seq_batch[:,K-1,:,:,:],
-                                                    model.target: seq_batch})
-              print "ola"
-              writer.add_summary(summary_str, counter)
+
             if updateG:
               _, summary_str = sess.run([g_optim, g_sum],
                                          feed_dict={model.velocity: diff_batch,
@@ -133,8 +124,19 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                                                     model.target: seq_batch})
               writer.add_summary(summary_str, counter)
             print "I am at checkpoint gotham"
-
             
+            if updateD:
+              
+              _, summary_str = sess.run([d_optim, d_sum],
+                                         feed_dict={model.velocity: diff_batch,
+                                                    model.accelaration: accel_batch,
+                                                    model.xt: seq_batch[:,K-1,:,:,:],
+                                                    model.target: seq_batch})
+              print "here there"
+              
+              writer.add_summary(summary_str, counter)
+            print "ola"
+          
 
             errD_fake = model.d_loss_fake.eval({model.velocity: diff_batch,
                                                   model.accelaration: accel_batch,
@@ -192,7 +194,7 @@ if __name__ == "__main__":
   parser.add_argument("--beta", type=float, dest="beta",
                       default=0.02, help="GAN loss weight")
   parser.add_argument("--image_size", type=int, dest="image_size",
-                      default=128, help="Mini-batch size")
+                      default=64, help="Mini-batch size")
   parser.add_argument("--K", type=int, dest="K",
                       default=3, help="Number of steps to observe from the past")
   parser.add_argument("--T", type=int, dest="T",
