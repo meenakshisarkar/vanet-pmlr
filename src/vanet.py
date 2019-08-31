@@ -252,8 +252,8 @@ class VANET(object):
             res_conv_out=[]
             no_layers= len(con_res_in)
             for i in xrange(no_layers):
-                res_conv1= convOp(con_res_in[i], acc_res_in[i] ,reuse,name= 'res_conv1')
-                res_conv2= convOp(res_conv1, vel_res_in[i], reuse,name='res_conv2')
+                res_conv1= convOp_mod(con_res_in[i], acc_res_in[i] ,reuse,name= 'res_conv1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
+                res_conv2= convOp_mod(res_conv1, vel_res_in[i], reuse,name='res_conv2')
                 res_conv_out.append(res_conv2)
         return res_conv_out
             

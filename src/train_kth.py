@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 def main(lr, batch_size, alpha, beta, image_size, K,
          T, num_iter, gpu):
   data_path = "../data/KTH/"
-  f = open(data_path+"train_data_list_trimmed_edited.txt","r")
+  f = open(data_path+"train_data_list_trimmed.txt","r")
   trainfiles = f.readlines()
   margin = 0.3 
   updateD = True
@@ -188,7 +188,7 @@ if __name__ == "__main__":
   parser.add_argument("--lr", type=float, dest="lr",
                       default=0.0001, help="Base Learning Rate")
   parser.add_argument("--batch_size", type=int, dest="batch_size",
-                      default=2, help="Mini-batch size")
+                      default=8, help="Mini-batch size")
   parser.add_argument("--alpha", type=float, dest="alpha",
                       default=1.0, help="Image loss weight")
   parser.add_argument("--beta", type=float, dest="beta",
@@ -196,9 +196,9 @@ if __name__ == "__main__":
   parser.add_argument("--image_size", type=int, dest="image_size",
                       default=64, help="Mini-batch size")
   parser.add_argument("--K", type=int, dest="K",
-                      default=3, help="Number of steps to observe from the past")
+                      default=5, help="Number of steps to observe from the past")
   parser.add_argument("--T", type=int, dest="T",
-                      default=1, help="Number of steps into the future")
+                      default=5, help="Number of steps into the future")
   parser.add_argument("--num_iter", type=int, dest="num_iter",
                       default=100, help="Number of iterations")
   parser.add_argument("--gpu", type=int, nargs="+", dest="gpu", required=False,
