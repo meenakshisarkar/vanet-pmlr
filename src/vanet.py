@@ -92,7 +92,7 @@ class VANET(object):
             #################reconstruction losses
             self.L_p = tf.reduce_mean(
                 tf.square(self.G - self.target[:, self.timesteps:, :, :, :]))
-            self.L_stgdl= stgdl(self.G, self.target[:,self.timesteps:, :, :,  :],1.0, self.image_size[0],channel_no=1)
+            self.L_stgdl= stgdl(self.G, self.target[:,self.timesteps:, :, :,  :],2.0, self.image_size[0],channel_no=1)
 
             self.reconst_loss= self.L_p+self.L_stgdl
 
@@ -195,9 +195,9 @@ class VANET(object):
             pool3 = MaxPooling(conv3, [2, 2],stride=2)
             print(pool3.shape)
             h1_state, vel_state = vel_LSTM(pool3, vel_state, scope='vel_lstm1', reuse=reuse)
-            h2_state, vel_state = vel_LSTM(h1_state, vel_state, scope='vel_lstm2', reuse=reuse)
-            h_vel_out, vel_state = vel_LSTM(h2_state, vel_state, scope='vel_lstm3', reuse=reuse)
-        return h_vel_out, vel_state, vel_res_in
+            # h2_state, vel_state = vel_LSTM(h1_state, vel_state, scope='vel_lstm2', reuse=reuse)
+            # h_vel_out, vel_state = vel_LSTM(h2_state, vel_state, scope='vel_lstm3', reuse=reuse)
+        return h1_state, vel_state, vel_res_in                  #h_vel_out
 
     def acc_enc(self, acc_in, acc_state, acc_LSTM, name, reuse):
         with tf.variable_scope(name, reuse):
@@ -217,9 +217,9 @@ class VANET(object):
             acc_res_in.append(conv3)
             pool3 = MaxPooling(conv3, [2, 2],stride=2)
             h1_state, acc_state = acc_LSTM(pool3, acc_state, scope='acc_lstm1', reuse=reuse)
-            h2_state, acc_state = acc_LSTM(h1_state, acc_state, scope='acc_lstm2', reuse=reuse)
-            h_acc_out, acc_state = acc_LSTM(h2_state, acc_state, scope='acc_lstm3', reuse=reuse)
-        return h_acc_out, acc_state, acc_res_in
+            # h2_state, acc_state = acc_LSTM(h1_state, acc_state, scope='acc_lstm2', reuse=reuse)
+            # h_acc_out, acc_state = acc_LSTM(h2_state, acc_state, scope='acc_lstm3', reuse=reuse)
+        return h1_state, acc_state, acc_res_in
 
     def content_enc(self,xt,name,reuse):
         with tf.variable_scope(name, reuse):
@@ -250,11 +250,17 @@ class VANET(object):
     def res_conv_layer(self, con_res_in, acc_res_in, vel_res_in,name, reuse):
         with tf.variable_scope(name, reuse):
             res_conv_out=[]
-            no_layers= len(con_res_in)
-            for i in xrange(no_layers):
-                res_conv1= convOp_mod(con_res_in[i], acc_res_in[i] ,reuse,name= 'res_conv1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
-                res_conv2= convOp_mod(res_conv1, vel_res_in[i], reuse,name='res_conv2')
-                res_conv_out.append(res_conv2)
+            # no_layers= len(con_res_in)
+            
+            res_conv1_1= convOp_mod(con_res_in[0], acc_res_in[0] ,reuse,name= 'res_conv1_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
+            res_conv1_2= convOp_mod(res_conv1_1, vel_res_in[0], reuse,name='res_conv1_2')
+            res_conv_out.append(res_conv1_2)
+            res_conv2_1= convOp_mod(con_res_in[1], acc_res_in[1] ,reuse,name= 'res_conv2_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
+            res_conv2_2= convOp_mod(res_conv2_1, vel_res_in[1], reuse,name='res_conv2_2')
+            res_conv_out.append(res_conv2_2)
+            res_conv3_1= convOp_mod(con_res_in[2], acc_res_in[2] ,reuse,name= 'res_conv3_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
+            res_conv3_2= convOp_mod(res_conv3_1, vel_res_in[2], reuse,name='res_conv3_2')
+            res_conv_out.append(res_conv3_2)
         return res_conv_out
             
     def dec_layer(self, cont_conv,res_conv,name, reuse):

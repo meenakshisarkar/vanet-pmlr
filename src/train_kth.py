@@ -113,6 +113,12 @@ def main(lr, batch_size, alpha, beta, image_size, K,
               seq_batch[i] = output[i][0]
               diff_batch[i] = output[i][1]
               accel_batch[i] = output[i][2]
+            
+              samples = np.concatenate((seq_batch[i],diff_batch[i],accel_batch[i]), axis=0)
+              print samples.shape
+              print("Saving sample ...")
+              save_images(samples[:,:,:,::-1], [0, K-3], 
+                            samples_dir+"inputs_to_network_%s.png" % (iters))
             print "I am at checkpoint batcave"
 ###################### need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
 
@@ -170,7 +176,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
               samples = sess.run([model.G],
                                   feed_dict={model.velocity: diff_batch,
                                           model.accelaration: accel_batch,
-                                          model.xt: seq_batch[K-1,:,:,:],
+                                          model.xt: seq_batch[:,K-1,:,:,:],
                                           model.target: seq_batch})[0]
               samples = samples[0]
               sbatch  = seq_batch[0,K:,:,:]
@@ -196,11 +202,11 @@ if __name__ == "__main__":
   parser.add_argument("--image_size", type=int, dest="image_size",
                       default=64, help="Mini-batch size")
   parser.add_argument("--K", type=int, dest="K",
-                      default=5, help="Number of steps to observe from the past")
+                      default=10, help="Number of steps to observe from the past")
   parser.add_argument("--T", type=int, dest="T",
-                      default=5, help="Number of steps into the future")
+                      default=10, help="Number of steps into the future")
   parser.add_argument("--num_iter", type=int, dest="num_iter",
-                      default=100, help="Number of iterations")
+                      default=10000, help="Number of iterations")
   parser.add_argument("--gpu", type=int, nargs="+", dest="gpu", required=False,
                       default=0, help="GPU device id")
 
