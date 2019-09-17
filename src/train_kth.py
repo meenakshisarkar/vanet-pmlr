@@ -114,14 +114,23 @@ def main(lr, batch_size, alpha, beta, image_size, K,
               diff_batch[i] = output[i][1]
               accel_batch[i] = output[i][2]
             
-              samples = np.concatenate((seq_batch[i],diff_batch[i],accel_batch[i]), axis=0)
-              print samples.shape
-              print("Saving sample ...")
-              save_images(samples[:,:,:,::-1], [0, K-3], 
-                            samples_dir+"inputs_to_network_%s.png" % (iters))
+              # samples = np.concatenate((seq_batch[i],diff_batch[i],accel_batch[i]), axis=0)
+              # print samples.shape
+              # print("Saving sample ...")
+              # save_images(samples[:,:,:,::-1], [0, K-3], 
+              #               samples_dir+"inputs_to_network_%s.png" % (iters))
             print "I am at checkpoint batcave"
 ###################### need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
 
+            if updateD:
+              
+              _, summary_str = sess.run([d_optim, d_sum],
+                                         feed_dict={model.velocity: diff_batch,
+                                                    model.accelaration: accel_batch,
+                                                    model.xt: seq_batch[:,K-1,:,:,:],
+                                                    model.target: seq_batch})
+              writer.add_summary(summary_str, counter)
+            print "here there"
             if updateG:
               _, summary_str = sess.run([g_optim, g_sum],
                                          feed_dict={model.velocity: diff_batch,
@@ -131,16 +140,9 @@ def main(lr, batch_size, alpha, beta, image_size, K,
               writer.add_summary(summary_str, counter)
             print "I am at checkpoint gotham"
             
-            if updateD:
+            
               
-              _, summary_str = sess.run([d_optim, d_sum],
-                                         feed_dict={model.velocity: diff_batch,
-                                                    model.accelaration: accel_batch,
-                                                    model.xt: seq_batch[:,K-1,:,:,:],
-                                                    model.target: seq_batch})
-              print "here there"
               
-              writer.add_summary(summary_str, counter)
             print "ola"
           
 

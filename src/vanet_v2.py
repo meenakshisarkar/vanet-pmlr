@@ -8,7 +8,7 @@ from utils import *
 import tensorflow.contrib.slim as slim
 
 
-class VANET(object):
+class VANET_v2(object):
     def __init__(self, image_size=[128, 128], batch_size=32, c_dim=3, timesteps=10, F=10,
                  checkpoint_dir=None, training=True):
         self.image_size = image_size
@@ -55,10 +55,10 @@ class VANET(object):
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1]))
             _Dis_real_img= tf.concat([_Dis_in_img,_Dis_target_img],axis=3)
             _Dis_fake_img= tf.concat([_Dis_in_img,_Dis_gen_img],axis=3)
-            self.D_real_, self.D_logits_real_= self.discriminator(_Dis_real_img, reuse= dis_reuse) 
-            print self.D_real_.shape
-            dis_reuse= True
-            self.D_fake_, self.D_logits_fake_ = self.discriminator(_Dis_fake_img, reuse= dis_reuse)
+            # self.D_real_, self.D_logits_real_= self.discriminator(_Dis_real_img, reuse= dis_reuse) 
+            # print self.D_real_.shape
+            # dis_reuse= True
+            # self.D_fake_, self.D_logits_fake_ = self.discriminator(_Dis_fake_img, reuse= dis_reuse)
 
             # for l in xrange(self.F):
             #     in_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l-2:self.timesteps+l,:,:,:], [0,2,3,1,4]),
@@ -84,10 +84,7 @@ class VANET(object):
             #     _D_logits_real.append(self.D_logits_real_)
             #     _D_fake.append(self.D_fake_)
             #     _D_logits_fake.append(self.D_logits_fake_)
-            self.D_real= tf.concat(axis=1, values=self.D_real_)
-            self.D_logits_real= tf.concat(axis=1, values= self.D_logits_real_)
-            self.D_fake= tf.concat(axis=1, values= self.D_fake_)
-            self.D_logits_fake= tf.concat(axis=1, values= self.D_logits_fake_)
+            
 
             #################reconstruction losses
             self.L_p = tf.reduce_mean(
@@ -98,31 +95,31 @@ class VANET(object):
 
 
             ################# Generative and adversarial losses
-            self.d_loss_real = tf.reduce_mean(
-                tf.nn.sigmoid_cross_entropy_with_logits(
-                    logits=self.D_logits_real, labels=tf.ones_like(self.D_real))) 
-            self.d_loss_fake = tf.reduce_mean(
-                tf.nn.sigmoid_cross_entropy_with_logits(
-                    logits=self.D_logits_fake, labels=tf.zeros_like(self.D_fake)))
-            self.d_loss= self.d_loss_real+self.d_loss_fake
+            # self.d_loss_real = tf.reduce_mean(
+            #     tf.nn.sigmoid_cross_entropy_with_logits(
+            #         logits=self.D_logits_real, labels=tf.ones_like(self.D_real))) 
+            # self.d_loss_fake = tf.reduce_mean(
+            #     tf.nn.sigmoid_cross_entropy_with_logits(
+            #         logits=self.D_logits_fake, labels=tf.zeros_like(self.D_fake)))
+            # self.d_loss= self.d_loss_real+self.d_loss_fake
 
-            self.L_gen= tf.reduce_mean(
-                tf.nn.sigmoid_cross_entropy_with_logits(
-                    logits=self.D_logits_fake, labels=tf.ones_like(self.D_fake)))
+            # self.L_gen= tf.reduce_mean(
+            #     tf.nn.sigmoid_cross_entropy_with_logits(
+            #         logits=self.D_logits_fake, labels=tf.ones_like(self.D_fake)))
 
             ################## Loss summery
             self.L_sum = tf.summary.scalar("reconst_loss", self.reconst_loss)
             self.L_p_sum = tf.summary.scalar("L_p", self.L_p)
             self.L_stgdl_sum = tf.summary.scalar("L_stgdl", self.L_stgdl)
-            self.L_Gen_sum = tf.summary.scalar("L_gen", self.L_gen)
-            self.d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
-            self.d_loss_real_sum = tf.summary.scalar("d_loss_real", self.d_loss_real)
-            self.d_loss_fake_sum = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
+            # self.L_Gen_sum = tf.summary.scalar("L_gen", self.L_gen)
+            # self.d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
+            # self.d_loss_real_sum = tf.summary.scalar("d_loss_real", self.d_loss_real)
+            # self.d_loss_fake_sum = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
 
             self.t_vars = tf.trainable_variables()
             slim.model_analyzer.analyze_vars(self.t_vars, print_info=True)
             self.g_vars = [var for var in self.t_vars if 'Dis' not in var.name]
-            self.d_vars = [var for var in self.t_vars if 'Dis' in var.name]
+            # self.d_vars = [var for var in self.t_vars if 'Dis' in var.name]
             num_param = 0.0
             for var in self.g_vars:
                 num_param += int(np.prod(var.get_shape()))
@@ -150,7 +147,7 @@ class VANET(object):
             if t==0:
                 h_con_state, con_res_in= self.content_enc(xt, name="content_enc", reuse=False)
                 cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out, name="conv_layer", reuse= False)
-                res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in,name="res_conv_layer", reuse= False)
+                res_conv = self.res_conv_layer(con_res_in, acc_res_in, vel_res_in,name="res_conv_layer", reuse= False)
                 x_tilda= self.dec_layer(cont_conv,res_conv,name="dec_layer", reuse = False)
                 print("I crossed decoding for t==0 layer")
                 print vel_in.shape
@@ -195,9 +192,9 @@ class VANET(object):
             pool3 = MaxPooling(conv3, [2, 2],stride=2)
             print(pool3.shape)
             h1_state, vel_state = vel_LSTM(pool3, vel_state, scope='vel_lstm1', reuse=reuse)
-            # h2_state, vel_state = vel_LSTM(h1_state, vel_state, scope='vel_lstm2', reuse=reuse)
-            # h_vel_out, vel_state = vel_LSTM(h2_state, vel_state, scope='vel_lstm3', reuse=reuse)
-        return h1_state, vel_state, vel_res_in                  #h_vel_out
+            h2_state, vel_state = vel_LSTM(h1_state, vel_state, scope='vel_lstm2', reuse=reuse)
+            h_vel_out, vel_state = vel_LSTM(h2_state, vel_state, scope='vel_lstm3', reuse=reuse)
+        return h_vel_out, vel_state, vel_res_in                  #h_vel_out
 
     def acc_enc(self, acc_in, acc_state, acc_LSTM, name, reuse):
         with tf.variable_scope(name, reuse):
@@ -217,9 +214,9 @@ class VANET(object):
             acc_res_in.append(conv3)
             pool3 = MaxPooling(conv3, [2, 2],stride=2)
             h1_state, acc_state = acc_LSTM(pool3, acc_state, scope='acc_lstm1', reuse=reuse)
-            # h2_state, acc_state = acc_LSTM(h1_state, acc_state, scope='acc_lstm2', reuse=reuse)
-            # h_acc_out, acc_state = acc_LSTM(h2_state, acc_state, scope='acc_lstm3', reuse=reuse)
-        return h1_state, acc_state, acc_res_in
+            h2_state, acc_state = acc_LSTM(h1_state, acc_state, scope='acc_lstm2', reuse=reuse)
+            h_acc_out, acc_state = acc_LSTM(h2_state, acc_state, scope='acc_lstm3', reuse=reuse)
+        return h_acc_out, acc_state, acc_res_in
 
     def content_enc(self,xt,name,reuse):
         with tf.variable_scope(name, reuse):

@@ -17,7 +17,7 @@ def inverse_transform(images):
 
 
 def save_images(images, size, image_path):
-  return imsave(inverse_transform(images)*255., size, image_path)
+  return imsave((images)*255., size, image_path)
 
 
 def merge(images, size):
@@ -104,7 +104,7 @@ def load_kth_data(f_name, data_path, image_size, K, T):
     img = cv2.cvtColor(cv2.resize(vid.get_data(stidx+t),
                        (image_size,image_size)),
                        cv2.COLOR_RGB2GRAY)
-    seq[t,:,:] = transform(img[:,:,None])
+    seq[t,:,:] = inverse_transform(transform(img[:,:,None]))
 
   # if flip == 1:
   #   seq = seq[:-1,:,:]
