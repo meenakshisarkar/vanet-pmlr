@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 def main(lr, batch_size, alpha, beta, image_size, K,
          T, num_iter, gpu):
     data_path = "../data/KTH/"
-    f = open(data_path+"train_data_list_trimmed.txt", "r")
+    f = open(data_path+"train_data_list_walking.txt", "r")
     trainfiles = f.readlines()
     margin = 0.3
     updateD = True
@@ -111,20 +111,23 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                             seq_batch[i] = output[i][0]
                             diff_batch[i] = output[i][1]
                             accel_batch[i] = output[i][2]
-
+                        print "I am at checkpoint batcave"
+                        if iters%50==0:    
+                            input_sample= seq_batch[0]
+                            print("Saving input_sample ...")
+                            save_images(input_sample[:K,:,:,::-1], [1, K],
+                                            samples_dir+"image_inputs_to_network_mod%s.png" % (iters))
+                            samples = diff_batch[0]
+                            print samples.shape
+                            print("Saving velocity_sample ...")
+                            save_images(samples[:,:,:,::-1], [1, K-1],
+                                            samples_dir+"velo_inputs_to_network_mod%s.png" % (iters))
                             
-                        print "I am at checkpoint batcave"
-                        samples = diff_batch[0]
-                        print samples.shape
-                        print("Saving velocity_sample ...")
-                        save_images(samples[:,:,:,::-1], [1, K-1],
-                                        samples_dir+"velo_inputs_to_network_mod%s.png" % (iters))
-                        print "I am at checkpoint batcave"
-                        samples = accel_batch[0]
-                        print samples.shape
-                        print("Saving accelaration_sample ...")
-                        save_images(samples[:,:,:,::-1], [1, K-2],
-                                        samples_dir+"accel_inputs_to_network_mod%s.png" % (iters))
+                            samples = accel_batch[0]
+                            print samples.shape
+                            print("Saving accelaration_sample ...")
+                            save_images(samples[:,:,:,::-1], [1, K-2],
+                                            samples_dir+"accel_inputs_to_network_mod%s.png" % (iters))
 # need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
 
                         # if updateD:

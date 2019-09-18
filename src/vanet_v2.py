@@ -1,6 +1,6 @@
 import os
 import tensorflow as tf
-import keras
+
 import numpy as np
 from BasicConvLSTMCell import BasicConvLSTMCell
 from ops import *
@@ -240,24 +240,28 @@ class VANET_v2(object):
     def conv_layer(self,h_con_state, h_acc_out, h_vel_out,name, reuse):
         # print h_con_state.shape, h_acc_out.shape
         with tf.variable_scope(name, reuse):
-            cont_conv1= convOp_mod(h_con_state, h_acc_out, reuse, name= 'conv_conv1')
-            cont_conv2= convOp_mod(cont_conv1, h_vel_out, reuse,name= 'conv_conv2')
+            "$Need to be updated$"
+            motion_in= tf.concat([h_vel_out, h_acc_out], axis= 0 )
+            motion_filter= relu(conv2d(motion_in, output_dim= h_acc_out.shape[-1]), k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "conv_layer1", reuse=reuse)
+            
         return cont_conv2
 
     def res_conv_layer(self, con_res_in, acc_res_in, vel_res_in,name, reuse):
         with tf.variable_scope(name, reuse):
-            res_conv_out=[]
-            # no_layers= len(con_res_in)
+            "$Need to be updated$"
+            # res_conv_out=[]
+            # # no_layers= len(con_res_in)
             
-            res_conv1_1= convOp_mod(con_res_in[0], acc_res_in[0] ,reuse,name= 'res_conv1_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
-            res_conv1_2= convOp_mod(res_conv1_1, vel_res_in[0], reuse,name='res_conv1_2')
-            res_conv_out.append(res_conv1_2)
-            res_conv2_1= convOp_mod(con_res_in[1], acc_res_in[1] ,reuse,name= 'res_conv2_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
-            res_conv2_2= convOp_mod(res_conv2_1, vel_res_in[1], reuse,name='res_conv2_2')
-            res_conv_out.append(res_conv2_2)
-            res_conv3_1= convOp_mod(con_res_in[2], acc_res_in[2] ,reuse,name= 'res_conv3_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
-            res_conv3_2= convOp_mod(res_conv3_1, vel_res_in[2], reuse,name='res_conv3_2')
-            res_conv_out.append(res_conv3_2)
+            # res_conv1_1= convOp_mod(con_res_in[0], acc_res_in[0] ,reuse,name= 'res_conv1_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
+            # res_conv1_2= convOp_mod(res_conv1_1, vel_res_in[0], reuse,name='res_conv1_2')
+            # res_conv_out.append(res_conv1_2)
+            # res_conv2_1= convOp_mod(con_res_in[1], acc_res_in[1] ,reuse,name= 'res_conv2_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
+            # res_conv2_2= convOp_mod(res_conv2_1, vel_res_in[1], reuse,name='res_conv2_2')
+            # res_conv_out.append(res_conv2_2)
+            # res_conv3_1= convOp_mod(con_res_in[2], acc_res_in[2] ,reuse,name= 'res_conv3_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
+            # res_conv3_2= convOp_mod(res_conv3_1, vel_res_in[2], reuse,name='res_conv3_2')
+            # res_conv_out.append(res_conv3_2)
         return res_conv_out
             
     def dec_layer(self, cont_conv,res_conv,name, reuse):
