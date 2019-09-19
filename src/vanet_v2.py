@@ -241,18 +241,46 @@ class VANET_v2(object):
         # print h_con_state.shape, h_acc_out.shape
         with tf.variable_scope(name, reuse):
             "$Need to be updated$"
-            motion_in= tf.concat([h_vel_out, h_acc_out], axis= 0 )
-            motion_filter= relu(conv2d(motion_in, output_dim= h_acc_out.shape[-1]), k_h=3, k_w=3,
-                                            d_h=1, d_w=1, name= "conv_layer1", reuse=reuse)
-            
+            motion_in= tf.concat([h_vel_out, h_acc_out], axis= 3 )
+            motion_filter= relu(conv2d(motion_in, output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "conv_layer1", reuse=reuse))
+            cont_conv1=relu(conv2d(tf.concat([h_con_state,motion_filter],axis=3),output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "conv_layer2", reuse=reuse ))
+            cont_conv2=relu(conv2d(cont_conv1,output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "conv_layer3", reuse=reuse ))
         return cont_conv2
 
     def res_conv_layer(self, con_res_in, acc_res_in, vel_res_in,name, reuse):
         with tf.variable_scope(name, reuse):
             "$Need to be updated$"
-            # res_conv_out=[]
-            # # no_layers= len(con_res_in)
-            
+            res_conv_out=[]
+            #no_layers= len(con_res_in)
+            res_motion_in1= tf.concat([vel_res_in[0], acc_res_in[0]], axis= 3 )
+            res_motion_filter1= relu(conv2d(res_motion_in1, output_dim= acc_res_in[0].shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "res_conv_layer1_1", reuse=reuse))
+            res_cont_conv1_1=relu(conv2d(tf.concat([con_res_in[0],res_motion_filter1],axis=3),output_dim= acc_res_in[0].shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "res_conv_layer1_2", reuse=reuse ))
+            res_cont_conv1_2=relu(conv2d(res_cont_conv1_1,output_dim= acc_res_in[0].shape[-1], k_h=5, k_w=5,
+                                            d_h=1, d_w=1, name= "res_conv_layer1_3", reuse=reuse ))
+            res_conv_out.append(res_cont_conv1_2)
+
+            res_motion_in2= tf.concat([vel_res_in[1], acc_res_in[1]], axis= 3 )
+            res_motion_filter2= relu(conv2d(res_motion_in2, output_dim= acc_res_in[1].shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "res_conv_layer2_1", reuse=reuse))
+            res_cont_conv2_1=relu(conv2d(tf.concat([con_res_in[1],res_motion_filter2],axis=3),output_dim= acc_res_in[1].shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "res_conv_layer2_2", reuse=reuse ))
+            res_cont_conv2_2=relu(conv2d(res_cont_conv2_1,output_dim= acc_res_in[1].shape[-1], k_h=5, k_w=5,
+                                            d_h=1, d_w=1, name= "res_conv_layer2_3", reuse=reuse ))
+            res_conv_out.append(res_cont_conv2_2)
+
+            res_motion_in3= tf.concat([vel_res_in[2], acc_res_in[2]], axis= 3 )
+            res_motion_filter3= relu(conv2d(res_motion_in3, output_dim= acc_res_in[2].shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "res_conv_layer3_1", reuse=reuse))
+            res_cont_conv3_1=relu(conv2d(tf.concat([con_res_in[2],res_motion_filter3],axis=3),output_dim= acc_res_in[2].shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "res_conv_layer3_2", reuse=reuse ))
+            res_cont_conv3_2=relu(conv2d(res_cont_conv3_1,output_dim= acc_res_in[2].shape[-1], k_h=3, k_w=3,
+                                            d_h=1, d_w=1, name= "res_conv_layer3_3", reuse=reuse ))
+            res_conv_out.append(res_cont_conv3_2)
             # res_conv1_1= convOp_mod(con_res_in[0], acc_res_in[0] ,reuse,name= 'res_conv1_1')   #ConvOp makes the computing extremely slow. Need a better way to evaluate cross conv
             # res_conv1_2= convOp_mod(res_conv1_1, vel_res_in[0], reuse,name='res_conv1_2')
             # res_conv_out.append(res_conv1_2)
