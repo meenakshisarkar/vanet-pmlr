@@ -201,13 +201,13 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, dest="lr",
                         default=0.0001, help="Base Learning Rate")
     parser.add_argument("--batch_size", type=int, dest="batch_size",
-                        default=1, help="Mini-batch size")
+                        default=8, help="Mini-batch size")
     parser.add_argument("--alpha", type=float, dest="alpha",
                         default=1.0, help="Image loss weight")
     parser.add_argument("--beta", type=float, dest="beta",
                         default=0.02, help="GAN loss weight")
     parser.add_argument("--image_size", type=int, dest="image_size",
-                        default=64, help="Mini-batch size")
+                        default=128, help="Mini-batch size")
     parser.add_argument("--K", type=int, dest="K",
                         default=5, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",
