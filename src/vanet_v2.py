@@ -55,10 +55,10 @@ class VANET_v2(object):
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1]))
             _Dis_real_img= tf.concat([_Dis_in_img,_Dis_target_img],axis=3)
             _Dis_fake_img= tf.concat([_Dis_in_img,_Dis_gen_img],axis=3)
-            # self.D_real_, self.D_logits_real_= self.discriminator(_Dis_real_img, reuse= dis_reuse) 
-            # print self.D_real_.shape
-            # dis_reuse= True
-            # self.D_fake_, self.D_logits_fake_ = self.discriminator(_Dis_fake_img, reuse= dis_reuse)
+            self.D_real_, self.D_logits_real_= self.discriminator(_Dis_real_img, reuse= dis_reuse) 
+            print self.D_real_.shape
+            dis_reuse= True
+            self.D_fake_, self.D_logits_fake_ = self.discriminator(_Dis_fake_img, reuse= dis_reuse)
 
             # for l in xrange(self.F):
             #     in_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l-2:self.timesteps+l,:,:,:], [0,2,3,1,4]),
@@ -80,10 +80,10 @@ class VANET_v2(object):
             #     if l==0: 
             #         dis_reuse= True
             #     self.D_fake_, self.D_logits_fake_ = self.discriminator(fake_img, reuse= dis_reuse)
-            #     _D_real.append(self.D_real_)
-            #     _D_logits_real.append(self.D_logits_real_)
-            #     _D_fake.append(self.D_fake_)
-            #     _D_logits_fake.append(self.D_logits_fake_)
+            # _D_real.append(self.D_real_)
+            # _D_logits_real.append(self.D_logits_real_)
+            # _D_fake.append(self.D_fake_)
+            # _D_logits_fake.append(self.D_logits_fake_)
             
 
             #################reconstruction losses
@@ -94,32 +94,32 @@ class VANET_v2(object):
             self.reconst_loss= self.L_p+self.L_stgdl
 
 
-            ################# Generative and adversarial losses
-            # self.d_loss_real = tf.reduce_mean(
-            #     tf.nn.sigmoid_cross_entropy_with_logits(
-            #         logits=self.D_logits_real, labels=tf.ones_like(self.D_real))) 
-            # self.d_loss_fake = tf.reduce_mean(
-            #     tf.nn.sigmoid_cross_entropy_with_logits(
-            #         logits=self.D_logits_fake, labels=tf.zeros_like(self.D_fake)))
-            # self.d_loss= self.d_loss_real+self.d_loss_fake
+            ################ Generative and adversarial losses
+            self.d_loss_real = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.D_logits_real_, labels=tf.ones_like(self.D_real_))) 
+            self.d_loss_fake = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.D_logits_fake_, labels=tf.zeros_like(self.D_fake_)))
+            self.d_loss= self.d_loss_real+self.d_loss_fake
 
-            # self.L_gen= tf.reduce_mean(
-            #     tf.nn.sigmoid_cross_entropy_with_logits(
-            #         logits=self.D_logits_fake, labels=tf.ones_like(self.D_fake)))
+            self.L_gen= tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(
+                    logits=self.D_logits_fake_, labels=tf.ones_like(self.D_fake_)))
 
             ################## Loss summery
             self.L_sum = tf.summary.scalar("reconst_loss", self.reconst_loss)
             self.L_p_sum = tf.summary.scalar("L_p", self.L_p)
             self.L_stgdl_sum = tf.summary.scalar("L_stgdl", self.L_stgdl)
-            # self.L_Gen_sum = tf.summary.scalar("L_gen", self.L_gen)
-            # self.d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
-            # self.d_loss_real_sum = tf.summary.scalar("d_loss_real", self.d_loss_real)
-            # self.d_loss_fake_sum = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
+            self.L_Gen_sum = tf.summary.scalar("L_gen", self.L_gen)
+            self.d_loss_sum = tf.summary.scalar("d_loss", self.d_loss)
+            self.d_loss_real_sum = tf.summary.scalar("d_loss_real", self.d_loss_real)
+            self.d_loss_fake_sum = tf.summary.scalar("d_loss_fake", self.d_loss_fake)
 
             self.t_vars = tf.trainable_variables()
             slim.model_analyzer.analyze_vars(self.t_vars, print_info=True)
             self.g_vars = [var for var in self.t_vars if 'Dis' not in var.name]
-            # self.d_vars = [var for var in self.t_vars if 'Dis' in var.name]
+            self.d_vars = [var for var in self.t_vars if 'Dis' in var.name]
             num_param = 0.0
             for var in self.g_vars:
                 num_param += int(np.prod(var.get_shape()))

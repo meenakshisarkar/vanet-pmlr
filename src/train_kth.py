@@ -8,7 +8,7 @@ import scipy.misc as sm
 import numpy as np
 import scipy.io as sio
 
-from vanet import VANET
+from vanet_v2 import VANET_v2
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -25,7 +25,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
   updateD = True
   updateG = True
   iters = 0
-  prefix  = ("KTH_VANET"
+  prefix  = ("KTH_VANET_v2"
           + "_image_size="+str(image_size)
           + "_K="+str(K)
           + "_T="+str(T)
@@ -53,7 +53,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
 
   with tf.device("/cpu:0"):             #Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else 
-    model = VANET(image_size=[image_size,image_size], c_dim=1,
+    model = VANET_v2(image_size=[image_size,image_size], c_dim=1,
                   timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
     d_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
         model.d_loss, var_list=model.d_vars)
@@ -113,6 +113,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
               seq_batch[i] = output[i][0]
               diff_batch[i] = output[i][1]
               accel_batch[i] = output[i][2]
+              
             
               # samples = np.concatenate((seq_batch[i],diff_batch[i],accel_batch[i]), axis=0)
               # print samples.shape
@@ -120,17 +121,34 @@ def main(lr, batch_size, alpha, beta, image_size, K,
               # save_images(samples[:,:,:,::-1], [0, K-3], 
               #               samples_dir+"inputs_to_network_%s.png" % (iters))
             print "I am at checkpoint batcave"
+
+            if iters%50==0:    
+              input_sample= seq_batch[0]
+              print("Saving input_sample ...")
+              save_images(input_sample[:K,:,:,::-1], [1, K],
+                                samples_dir+"image_inputs_to_network_mod%s.png" % (iters))
+              samples = diff_batch[0]
+              print samples.shape
+              print("Saving velocity_sample ...")
+              save_images(samples[:,:,:,::-1], [1, K-1],
+                                samples_dir+"velo_inputs_to_network_mod%s.png" % (iters))
+                            
+              samples = accel_batch[0]
+              print samples.shape
+              print("Saving accelaration_sample ...")
+              save_images(samples[:,:,:,::-1], [1, K-2],
+                                samples_dir+"accel_inputs_to_network_mod%s.png" % (iters))
 ###################### need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
 
             if updateD:
-              
+              print "I am entering gotham"
               _, summary_str = sess.run([d_optim, d_sum],
                                          feed_dict={model.velocity: diff_batch,
                                                     model.accelaration: accel_batch,
                                                     model.xt: seq_batch[:,K-1,:,:,:],
                                                     model.target: seq_batch})
               writer.add_summary(summary_str, counter)
-            print "here there"
+            print "I am going inside Arkham Asylum "
             if updateG:
               _, summary_str = sess.run([g_optim, g_sum],
                                          feed_dict={model.velocity: diff_batch,
@@ -138,14 +156,8 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                                                     model.xt: seq_batch[:,K-1,:,:],
                                                     model.target: seq_batch})
               writer.add_summary(summary_str, counter)
-            print "I am at checkpoint gotham"
+            print "I am at checking out of gotham"
             
-            
-              
-              
-            print "ola"
-          
-
             errD_fake = model.d_loss_fake.eval({model.velocity: diff_batch,
                                                   model.accelaration: accel_batch,
                                                   model.xt: seq_batch[:,K-1,:,:,:],
@@ -174,7 +186,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                 % (iters, time.time() - start_time, errD_fake+errD_real,errG)
             )
 
-            if np.mod(counter, 100) == 1:
+            if counter%100 == 0:
               samples = sess.run([model.G],
                                   feed_dict={model.velocity: diff_batch,
                                           model.accelaration: accel_batch,
@@ -202,7 +214,7 @@ if __name__ == "__main__":
   parser.add_argument("--beta", type=float, dest="beta",
                       default=0.02, help="GAN loss weight")
   parser.add_argument("--image_size", type=int, dest="image_size",
-                      default=64, help="Mini-batch size")
+                      default=128, help="Mini-batch size")
   parser.add_argument("--K", type=int, dest="K",
                       default=10, help="Number of steps to observe from the past")
   parser.add_argument("--T", type=int, dest="T",
