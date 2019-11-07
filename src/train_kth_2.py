@@ -19,20 +19,21 @@ from joblib import Parallel, delayed
 def main(lr, batch_size, alpha, beta, image_size, K,
          T, num_iter, gpu):
     data_path = "../data/KTH/"
-    f = open(data_path+"train_data_list_walking.txt", "r")
+    f = open(data_path+"train_data_list_trimmed.txt", "r")
     trainfiles = f.readlines()
     margin = 0.3
     updateD = True
     updateG = True
-    iters = 0
-    prefix = ("KTH_VANET"
+    iters = 9001
+    prefix = ("KTH_Full_VANET_v2"
               + "_image_size="+str(image_size)
               + "_K="+str(K)
               + "_T="+str(T)
               + "_batch_size="+str(batch_size)
               + "_alpha="+str(alpha)
               + "_beta="+str(beta)
-              + "_lr="+str(lr))
+              + "_lr="+str(lr)
+              +"_no_iteration"+str(num_iter))
 
     print("\n"+prefix+"\n")
     checkpoint_dir = "../models/"+prefix+"/"
@@ -52,7 +53,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
         gpus = True
 
     # Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else
-    with tf.device("/cpu:0"):
+    with tf.device("/gpu:0"):
         model = VANET_v2(image_size=[image_size, image_size], c_dim=1,
                          timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
 
@@ -61,7 +62,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
     # (config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=False,gpu_options=gpu_options if gpus else None))
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False, gpu_options=gpu_options if gpus else None)) as sess:
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False, gpu_options=gpu_options)) as sess:                                     #if gpus else None
 
         tf.global_variables_initializer().run()
 
@@ -112,7 +113,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                             diff_batch[i] = output[i][1]
                             accel_batch[i] = output[i][2]
                         print "I am at checkpoint batcave"
-                        if iters%50==0:    
+                        if iters%200==0:    
                             input_sample= seq_batch[0]
                             print("Saving input_sample ...")
                             save_images(input_sample[:K,:,:,::-1], [1, K],
@@ -174,11 +175,11 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                         counter += 1
 
                         print(
-                            "Iters: [%2d] time: %4.4f, d_loss: %.8f, L_GAN: %.8f"
+                            "Iters: [%2d] time: %4.4f, Error_L_p: %.8f, Error_L_stgdl: %.8f"
                             % (iters, time.time() - start_time, errG_L_sum, errG_L_stgdl_sum)
                         )
 
-                        if np.mod(counter, 100) == 1:
+                        if (iters%100) == 0:
                             samples = sess.run([model.G],
                                                feed_dict={model.velocity: diff_batch,
                                                           model.accelaration: accel_batch,
@@ -190,7 +191,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                             print("Saving sample ...")
                             save_images(samples[:, :, :, ::-1], [2, T],
                                         samples_dir+"train_%s.png" % (iters))
-                        if np.mod(counter, 500) == 2:
+                        if np.mod(iters, 500) == 0:
                             model.save(sess, checkpoint_dir, counter)
 
                         iters += 1
@@ -209,11 +210,11 @@ if __name__ == "__main__":
     parser.add_argument("--image_size", type=int, dest="image_size",
                         default=128, help="Mini-batch size")
     parser.add_argument("--K", type=int, dest="K",
-                        default=5, help="Number of steps to observe from the past")
+                        default=10, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",
-                        default=5, help="Number of steps into the future")
+                        default=10, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",
-                        default=10000, help="Number of iterations")
+                        default=100000, help="Number of iterations")
     parser.add_argument("--gpu", type=int, nargs="+", dest="gpu", required=False,
                         default=0, help="GPU device id")
 
