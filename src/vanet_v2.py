@@ -51,6 +51,8 @@ class VANET_v2(object):
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1]))
             _Dis_target_img=inverse_transform(tf.reshape(tf.transpose(self.target[:,self.timesteps:self.timesteps+self.F,:,:,:],[0,2,3,4,1]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1]))
+            # _Dis_gen_img=(tf.reshape(tf.transpose(self.G, [0,2,3,1,4]),
+            #                                 [self.batch_size,self.image_size[0], self.image_size[1],-1]))
             _Dis_gen_img=inverse_transform(tf.reshape(tf.transpose(self.G, [0,2,3,1,4]),
                                             [self.batch_size,self.image_size[0], self.image_size[1],-1]))
             _Dis_real_img= tf.concat([_Dis_in_img,_Dis_target_img],axis=3)
@@ -163,9 +165,13 @@ class VANET_v2(object):
                 cont_conv = self.conv_layer(h_con_state, h_acc_out, h_vel_out, name="conv_layer",reuse= True)
                 res_conv= self.res_conv_layer(con_res_in, acc_res_in, vel_res_in, name="res_conv_layer", reuse= True)
                 x_tilda= self.dec_layer(cont_conv,res_conv, name="dec_layer", reuse= True)
-            vel_in_past= vel_in
-            vel_in= x_tilda- xt
+            
+            vel_in_past= (vel_in)
+            vel_in= (x_tilda- xt)
+            # vel_in_past= inverse_transform(vel_in)
+            # vel_in= inverse_transform(x_tilda- xt)
             acc_in= vel_in - vel_in_past
+            # x_tilda= inverse_transform(x_tilda)
             xt=x_tilda
             predict.append(tf.reshape(x_tilda,[self.batch_size,1, self.image_size[0], self.image_size[1], self.c_dim]))
 
@@ -190,7 +196,6 @@ class VANET_v2(object):
                                 d_h=1, d_w=1, name='vel_conv3', reuse=reuse))
             vel_res_in.append(conv3)
             pool3 = MaxPooling(conv3, [2, 2],stride=2)
-            print(pool3.shape)
             h1_state, vel_state = vel_LSTM(pool3, vel_state, scope='vel_lstm1', reuse=reuse)
             h2_state, vel_state = vel_LSTM(h1_state, vel_state, scope='vel_lstm2', reuse=reuse)
             h_vel_out, vel_state = vel_LSTM(h2_state, vel_state, scope='vel_lstm3', reuse=reuse)
