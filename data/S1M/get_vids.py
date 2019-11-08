@@ -8,7 +8,7 @@ SAVE_PATH = "../../data/S1M/" #to_do
 #link of the video to be downloaded 
 paths=open('train_partition.txt', 'r') #opening the file + ' --recode-video ' + ' mp4 '
 lines = paths.readlines()
-MAX_NUM_VIDS = 10
+MAX_NUM_VIDS = 70000
 for ln in range(MAX_NUM_VIDS):
   video_name = 'sports-1m_{0:09d}'.format(ln)
   link= lines[ln].split(' ')[0]
