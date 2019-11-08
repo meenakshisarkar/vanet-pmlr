@@ -8,3 +8,5 @@ models/KTH/Paper_model/checkpoint 01-32-56-427
 *.png
 .DS_Store
 .DS_Store
+*.mp4
+*.json
