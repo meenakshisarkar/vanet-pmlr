@@ -1,1 +1,4 @@
 person18_handwaving_d1 281 476
+person18_walking_d1 505 577
+person19_handwaving_d4 1 155
+person20_running_d2 288 334

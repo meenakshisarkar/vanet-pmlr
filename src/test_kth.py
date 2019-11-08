@@ -155,45 +155,47 @@ def main(prefix, image_size, K, T, gpu):
         save_images(samples[:, :, :, ::-1], [2, T],
                         samples_dir+"test_%s.png" % (14))
                         ##########
-    #     cpsnr = np.zeros((K+T,))
-    #     cssim = np.zeros((K+T,))
-    #     pred_data = np.concatenate((seq_batch[:,:K,:,:], pred_data),axis=1)
-    #     true_data = np.concatenate((seq_batch[:,:K,:,:], true_data),axis=1)
-    #     for t in xrange(K+T):
-    #       pred = (inverse_transform(pred_data[0,t,:,:])*255).astype("float32")    #.astype("uint8")
-    #       target = (inverse_transform(true_data[0,t,:,:])*255).astype("float32")         #.astype("uint8")
+        cpsnr = np.zeros((K+T,))
+        cssim = np.zeros((K+T,))
+        pred_data = np.concatenate((seq_batch[:,:K,:,:], pred_data),axis=1)
+        true_data = np.concatenate((seq_batch[:,:K,:,:], true_data),axis=1)
+        for t in xrange(K+T):
+          pred = ((pred_data[0,t,:,:])*255).astype("uint8")    #.astype("uint8")
+          target = ((true_data[0,t,:,:])*255).astype("uint8")         #.astype("uint8")
 
-    #     #   cpsnr[t] = measure.compare_psnr(pred,target, range=[0,1])
-    #     #   cssim[t] = ssim.compute_ssim(Image.fromarray(cv2.cvtColor(target,
-    #     #                                                cv2.COLOR_GRAY2BGR)),
-    #     #                                Image.fromarray(cv2.cvtColor(pred,
-    #     #                                                cv2.COLOR_GRAY2BGR)), range=[0,1])
-    #     #   pred = draw_frame(pred, t < K)
-    #     #   target = draw_frame(target, t < K)
+          # cpsnr[t] = measure.compare_psnr(pred,target, range[0,1])
+          # cssim[t] = ssim.compute_ssim(Image.fromarray(target),Image.fromarray(pred), range= [0,1])
+          # cssim[t] = ssim.compute_ssim(Image.fromarray(cv2.cvtColor(target,
+          #                                              cv2.COLOR_GRAY2BGR)),
+          #                              Image.fromarray(cv2.cvtColor(pred,
+          #                                              cv2.COLOR_GRAY2BGR)), range=[0,255])
+          pred = draw_frame(pred, t < K)
+          target = draw_frame(target, t < K)
 
-    #       cv2.imwrite(savedir+"/pred_"+"{0:04d}".format(t)+".png", pred)
-    #       cv2.imwrite(savedir+"/gt_"+"{0:04d}".format(t)+".png", target)
+          cv2.imwrite(savedir+"/pred_"+"{0:04d}".format(t)+".png", pred)
+          cv2.imwrite(savedir+"/gt_"+"{0:04d}".format(t)+".png", target)
 
-    #     cmd1 = "rm "+savedir+"/pred.gif"
-    #     cmd2 = ("ffmpeg -f image2 -framerate 7 -i "+savedir+
-    #             "/pred_%04d.png "+savedir+"/pred.gif")
-    #     cmd3 = "rm "+savedir+"/pred*.png"
+        cmd1 = "rm "+savedir+"/pred.gif"
+        cmd2 = ("ffmpeg -f image2 -framerate 7 -i "+savedir+
+                "/pred_%04d.png "+savedir+"/pred.gif")
+        cmd3 = "rm "+savedir+"/pred*.png"
 
-    #     # Comment out "system(cmd3)" if you want to keep the output images
-    #     # Otherwise only the gifs will be kept
-    #     #system(cmd1); 
-    #     system(cmd2) 
-    #     #system(cmd3)
+        # Comment out "system(cmd3)" if you want to keep the output images
+        # Otherwise only the gifs will be kept
+        #system(cmd1); 
+        system(cmd2) 
+        system(cmd3)
 
-    #     cmd1 = "rm "+savedir+"/gt.gif"
-    #     cmd2 = ("ffmpeg -f image2 -framerate 7 -i "+savedir+
-    #             "/gt_%04d.png "+savedir+"/gt.gif")
-    #     cmd3 = "rm "+savedir+"/gt*.png"
+        cmd1 = "rm "+savedir+"/gt.gif"
+        cmd2 = ("ffmpeg -f image2 -framerate 7 -i "+savedir+
+                "/gt_%04d.png "+savedir+"/gt.gif")
+        cmd3 = "rm "+savedir+"/gt*.png"
 
-    #     # Comment out "system(cmd3)" if you want to keep the output images
-    #     # Otherwise only the gifs will be kept
-    #     #system(cmd1); 
-    #     system(cmd2); #system(cmd3)
+        # Comment out "system(cmd3)" if you want to keep the output images
+        # Otherwise only the gifs will be kept
+        #system(cmd1); 
+        system(cmd2); 
+        system(cmd3)
 
     #     psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
     #     ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
