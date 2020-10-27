@@ -184,7 +184,7 @@ def load_kitti_data(vid_dir, data_path, resize_h, K, T):
   
   vid_path = os.path.join(data_path, vid_dir)
   img_files = glob.glob(os.path.join(vid_path, 'image_00/data/*.png'))
-  imgs = [imageio.imread(img_file)[np.newaxis, :, :] for img_file in img_files]
+  imgs = [imageio.imread(img_file)[np.newaxis, :, :] for img_file in sorted(img_files)]
   vid = np.concatenate(imgs, axis=0)
   
   low = 0
