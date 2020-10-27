@@ -6,7 +6,8 @@ import random
 import imageio
 import scipy.misc
 import numpy as np
-
+import os
+import glob
 
 def transform(image):
     return image/127.5 - 1.
@@ -162,3 +163,57 @@ def load_s1m_data(f_name, data_path, trainlist, K, T):
       f_name = trainlist[rep_idx]
       vid_path = data_path + f_name
   return seq, diff
+
+def load_kitti_data(vid_dir, data_path, resize_h, K, T):
+  
+  """
+  Arguments:
+
+    vid_dir: date_drive folder e.g. 2011_09_26_drive_00002_sync
+    data_path: base path
+    resize_h: height to which each frame would be resized, resize_w is computed based on aspect ratio
+    K: num input time steps
+    T: num output time steps
+
+  Returns:
+
+      seq: K+T length video sequence
+      diff: velocity map
+      accel: acceleration map
+  """
+  
+  vid_path = os.path.join(data_path, vid_dir)
+  img_files = glob.glob(os.path.join(vid_path, 'image_00/data/*.png'))
+  imgs = [imageio.imread(img_file)[np.newaxis, :, :] for img_file in img_files]
+  vid = np.concatenate(imgs, axis=0)
+  
+  low = 0
+  high = vid.shape[0] - K - T + 1
+  assert low <= high, 'video length shorter than K+T'
+  
+  stidx = np.random.randint(low, high)
+  img_h, img_w = vid.shape[1:]
+  r = resize_h / img_h
+  resize_shape = (resize_h, int(img_w * r))
+  
+  seq = np.zeros((K+T, *resize_shape, 1), dtype="float32")
+  
+  for t in range(0, K+T):
+    img = cv2.resize(vid[stidx + t, :, :], resize_shape[::-1])
+    seq[t, :, :] = img[:, :, np.newaxis]
+  
+  diff = np.zeros((K-1, *resize_shape, 1), dtype="float32")
+  
+  for t in range(1, K):
+    prev = seq[t-1, :, :]
+    next = seq[t, :, :]
+    diff[t-1, :, :] = next.astype('float32') - prev.astype('float32')
+  
+  accel= np.zeros((K-2, *resize_shape,1), dtype="float32")
+  
+  for t in range(1,K-1):
+    prev_diff= diff[t-1,:, :]
+    next_diff= diff[t,:,:]
+    accel[t-1,:,:]= next_diff - prev_diff  
+  
+  return seq, diff, accel
