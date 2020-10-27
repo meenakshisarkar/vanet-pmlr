@@ -198,20 +198,20 @@ def load_kitti_data(vid_dir, data_path, resize_h, K, T):
   
   seq = np.zeros((K+T, *resize_shape, 1), dtype="float32")
   
-  for t in range(0, K+T):
+  for t in xrange(0, K+T):
     img = cv2.resize(vid[stidx + t, :, :], resize_shape[::-1])
     seq[t, :, :] = img[:, :, np.newaxis]
   
   diff = np.zeros((K-1, *resize_shape, 1), dtype="float32")
   
-  for t in range(1, K):
+  for t in xrange(1, K):
     prev = seq[t-1, :, :]
     next = seq[t, :, :]
     diff[t-1, :, :] = next.astype('float32') - prev.astype('float32')
   
   accel= np.zeros((K-2, *resize_shape,1), dtype="float32")
   
-  for t in range(1,K-1):
+  for t in xrange(1,K-1):
     prev_diff= diff[t-1,:, :]
     next_diff= diff[t,:,:]
     accel[t-1,:,:]= next_diff - prev_diff  
