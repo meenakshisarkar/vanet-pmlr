@@ -317,9 +317,9 @@ class VANET(object):
                                     d_h=1, d_w=1, name='dec_deconv4_2', reuse=reuse))
 
             decod5_1 = tf.concat(axis=3, values=[decode4_2, self.xt])
-            decode_out = relu(conv2d(decod5_1, output_dim=self.c_dim, k_h=1, k_w=1,
+            decode_out = tanh(conv2d(decod5_1, output_dim=self.c_dim, k_h=1, k_w=1,
                                 d_h=1, d_w=1, name='decode_out', reuse=reuse))
-        
+            decode_out = tf.image.resize_images(decode_out, size=self.image_size)
         return decode_out
 
     def discriminator(self, image, name= 'Dis', reuse= False):
