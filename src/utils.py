@@ -182,7 +182,7 @@ def load_kitti_data(vid_dir, data_path, resize_h, K, T, vid_type='03'):
       accel: acceleration map
   """
   
-  vid_path = os.path.join(data_path, vid_dir)
+  vid_path = os.path.join(data_path, vid_dir+"_sync")
   img_files = glob.glob(os.path.join(vid_path, 'image_{}/data/*.png'.format(vid_type)))
   imgs = [imageio.imread(img_file)[np.newaxis, ...] for img_file in sorted(img_files)]
   vid = np.concatenate(imgs, axis=0)

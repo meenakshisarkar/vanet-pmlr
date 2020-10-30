@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
          T, num_iter, gpu):
     data_path = "../data/KITTI/"
-    with open(data_path+"train_data_list.txt", "r") as f:
+    with open(data_path+"train.txt", "r") as f:
         trainfiles = f.readlines()
     margin = 0.3
     updateD = True
