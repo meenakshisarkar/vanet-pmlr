@@ -181,6 +181,7 @@ def stgdl(gen_frames, gt_frames, alpha, image_size, channel_no):
   @param gen_frames: The predicted frames at each scale.
   @param gt_frames: The ground truth frames at each scale
   @param alpha: The power to which each gradient term is raised.
+  @param image_size: tuple for image shape (h,w)
   @return: The GDL loss.
   """
   # create filters [-1, 1] and [[1],[-1]]
@@ -203,13 +204,13 @@ def stgdl(gen_frames, gt_frames, alpha, image_size, channel_no):
   # gen_frames= tf.reshape(gen_frames, [-1, image_size,image_size,channel_no])
   # gt_frames= tf.reshape(gt_frames, [-1, image_size,image_size,channel_no])
 
-  gen_dx = tf.abs(tf.nn.conv2d(tf.reshape(gen_frames, [-1, image_size,image_size,channel_no]),
+  gen_dx = tf.abs(tf.nn.conv2d(tf.reshape(gen_frames, [-1, image_size[0],image_size[1],channel_no]),
                                                              filter_x, strides1, padding=padding))
-  gen_dy = tf.abs(tf.nn.conv2d(tf.reshape(gen_frames, [-1, image_size,image_size,channel_no]),
+  gen_dy = tf.abs(tf.nn.conv2d(tf.reshape(gen_frames, [-1, image_size[0],image_size[1],channel_no]),
                                                              filter_y, strides1, padding=padding))
-  gt_dx = tf.abs(tf.nn.conv2d(tf.reshape(gt_frames, [-1, image_size,image_size,channel_no]),
+  gt_dx = tf.abs(tf.nn.conv2d(tf.reshape(gt_frames, [-1, image_size[0],image_size[1],channel_no]),
                                                              filter_x, strides1, padding=padding))
-  gt_dy = tf.abs(tf.nn.conv2d(tf.reshape(gt_frames, [-1, image_size,image_size,channel_no]),
+  gt_dy = tf.abs(tf.nn.conv2d(tf.reshape(gt_frames, [-1, image_size[0],image_size[1],channel_no]),
                                                              filter_y, strides1, padding=padding))
   
   

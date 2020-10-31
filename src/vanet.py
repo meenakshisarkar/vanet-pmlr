@@ -92,7 +92,7 @@ class VANET(object):
             #################reconstruction losses
             self.L_p = tf.reduce_mean(
                 tf.square(self.G - self.target[:, self.timesteps:, :, :, :]))
-            self.L_stgdl= stgdl(self.G, self.target[:,self.timesteps:, :, :,  :],1.0, self.image_size[0],channel_no=1)
+            self.L_stgdl= stgdl(self.G, self.target[:,self.timesteps:, :, :,  :],1.0, self.image_size,channel_no=1)
 
             self.reconst_loss= self.L_p+2*self.L_stgdl
 
