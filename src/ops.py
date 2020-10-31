@@ -218,7 +218,7 @@ def stgdl(gen_frames, gt_frames, alpha, image_size, channel_no):
   grad_diff_x = tf.abs(gt_dx - gen_dx)
   grad_diff_y = tf.abs(gt_dy - gen_dy)
   grad_diff_t = tf.abs(gt_dt-gen_dt)
-  grad_diff_t= tf.reshape(grad_diff_t,[-1, image_size, image_size,channel_no])
+  grad_diff_t= tf.reshape(grad_diff_t,[-1, image_size[0], image_size[1], channel_no])
 
   spatial_loss = (tf.reduce_mean((grad_diff_t**alpha + grad_diff_x ** alpha + grad_diff_y ** alpha)))
 
