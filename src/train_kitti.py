@@ -25,7 +25,7 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
     margin = 0.3
     updateD = True
     updateG = True
-    iters = 9001
+    iters = 1
     prefix = ("KITTI_Full_VANET"
               + "_image_h="+str(image_h)
               + "_K="+str(K)
@@ -53,7 +53,7 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
     else:
         gpus = True
 
-    image_w = int((image_h / 375) * 1242)
+    image_w = int((image_h / 375.0) * 1242)
 
     # Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else
     with tf.device("/gpu:0"):

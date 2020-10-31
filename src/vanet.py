@@ -284,6 +284,7 @@ class VANET(object):
             res_cont_conv3_2=relu(conv2d(res_cont_conv3_1,output_dim= acc_res_in[2].shape[-1], k_h=3, k_w=3,
                                             d_h=1, d_w=1, name= "res_conv_layer3_3", reuse=reuse ))
             res_conv_out.append(res_cont_conv3_2)
+        return res_conv_out
             
     def dec_layer(self, cont_conv,res_conv,name, reuse):
         with tf.variable_scope(name, reuse):
