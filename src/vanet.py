@@ -305,12 +305,19 @@ class VANET(object):
                                     d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
             ### 64 channels image 64 *64
             shape3 = [self.batch_size, self.image_size[0],
-                                            self.image_size[1], self.filters]
+                                            (self.image_size[1]/2)*2, self.filters]
             decod3_1 = tf.concat(axis=3, values=[decode2_2, res_conv[1]])
             up_samp3 = FixedUnPooling(decod3_1, [2, 2])
             decode3_2 = relu(deconv2d(up_samp3,
                                     output_shape=shape3, k_h=5, k_w=5,
                                     d_h=1, d_w=1, name='dec_deconv3_2', reuse=reuse))
+            shape4 = [self.batch_size, self.image_size[0],
+                                            self.image_size[1], self.filters]
+            if self.image_size[1] == 423:
+                decode3_2 = relu(deconv2d(decode3_2,
+                                        output_shape=shape4, k_h=2, k_w=2,
+                                        d_h=1, d_w=1, name='dec_deconv3_2_1', 
+                                        reuse=reuse, padding='VALID'))
             #### 32 channels image 128*128
             decod4_1 = tf.concat(axis=3, values=[decode3_2, res_conv[0]])
             decode4_2 = relu(deconv2d(decod4_1,
@@ -320,7 +327,7 @@ class VANET(object):
             decod5_1 = tf.concat(axis=3, values=[decode4_2, self.xt])
             decode_out = tanh(conv2d(decod5_1, output_dim=self.c_dim, k_h=1, k_w=1,
                                 d_h=1, d_w=1, name='decode_out', reuse=reuse))
-            decode_out = tf.image.resize_images(decode_out, size=self.image_size)
+            # decode_out = tf.image.resize_images(decode_out, size=self.image_size)
         return decode_out
 
     def discriminator(self, image, name= 'Dis', reuse= False):
