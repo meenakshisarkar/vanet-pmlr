@@ -321,7 +321,7 @@ class VANET(object):
             #### 32 channels image 128*128
             decod4_1 = tf.concat(axis=3, values=[decode3_2, res_conv[0]])
             decode4_2 = relu(deconv2d(decod4_1,
-                                    output_shape=shape3, k_h=5, k_w=5,
+                                    output_shape=shape4, k_h=5, k_w=5,
                                     d_h=1, d_w=1, name='dec_deconv4_2', reuse=reuse))
 
             decod5_1 = tf.concat(axis=3, values=[decode4_2, self.xt])
