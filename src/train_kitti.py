@@ -86,7 +86,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
         start_time = time.time()
         rem_ip_samples, rem_gen_samples, rem_model = [], [], []
         with Parallel(n_jobs=batch_size) as parallel:
-            while iters < num_iter:
+            while iters <= num_iter:
                 mini_batches = get_minibatches_idx(
                     len(trainfiles), batch_size, shuffle=True)
                 for _, batchidx in mini_batches:
@@ -174,14 +174,14 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                           updateD = True
                           updateG = True
 
-                        counter += 1
+                        # iters += 1
 
                         print(
-                            "Iters: [%2d] time: %4.4f, Error_L_p: %.8f, Error_L_stgdl: %.8f"
-                            % (iters, time.time() - start_time, errG_L_sum, errG_L_stgdl_sum)
-                        )
+                                "Iters: [%2d] time: %4.4f, d_loss: %.8f, L_GAN: %.8f" 
+                                % (iters, time.time() - start_time, errD_fake+errD_real,errG)
+                            )
 
-                        if (iters%100) == 0:
+                        if iters%100 == 0:
                             samples = sess.run([model.G],
                                                feed_dict={model.velocity: diff_batch,
                                                           model.accelaration: accel_batch,
