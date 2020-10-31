@@ -153,16 +153,14 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                             writer.add_summary(summary_str, counter)
                         print "I am at checkpoint gotham"
 
-                        print "ola"
-
-                        errG_L_sum = model.L_p.eval({model.velocity: diff_batch,
-                                                               model.accelaration: accel_batch,
-                                                               model.xt: seq_batch[:,K-1,:,:,:],
-                                                               model.target: seq_batch})
-                        errG_L_stgdl_sum = model.L_stgdl.eval({model.velocity: diff_batch,
-                                                              model.accelaration: accel_batch,
-                                                              model.xt: seq_batch[:,K-1,:,:,:],
-                                                              model.target: seq_batch})
+                        errD_fake = model.d_loss_fake.eval({model.velocity: diff_batch,
+                                                                model.accelaration: accel_batch,
+                                                                model.xt: seq_batch[:,K-1,:,:,:],
+                                                                model.target: seq_batch})
+                        errD_real = model.d_loss_real.eval({model.velocity: diff_batch,
+                                                                model.accelaration: accel_batch,
+                                                                model.xt: seq_batch[:,K-1,:,:,:],
+                                                                model.target: seq_batch})
                         errG = model.L_gen.eval({model.velocity: diff_batch,
                                                       model.accelaration: accel_batch,
                                                       model.xt: seq_batch[:,K-1,:,:,:],
