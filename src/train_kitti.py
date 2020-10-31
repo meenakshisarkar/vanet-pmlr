@@ -198,6 +198,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                                 if os.path.exists(f):
                                     os.path.remove(f)
                                 rem_gen_samples.append(os.path.join(samples_dir, "train_%s.png" % (iters)))
+                            rem_gen_samples.append(samples_dir+"train_%s.png" % (iters))
                         if np.mod(iters, 500) == 0:
                             model.save(sess, checkpoint_dir, counter)
 
@@ -215,9 +216,9 @@ if __name__ == "__main__":
     parser.add_argument("--beta", type=float, dest="beta",
                         default=0.02, help="GAN loss weight")
     parser.add_argument("--image_h", type=int, dest="image_h",
-                        default=128, help="Frame height")
+                        default=64, help="Frame height")
     parser.add_argument("--image_w", type=int, dest="image_w",
-                        default=424, help="Frame width")
+                        default=208, help="Frame width")
     parser.add_argument("--vid_type", type=str, dest="vid_type",
                         default='03', help="Grayscale/color, right/left stereo recordings")
     parser.add_argument("--K", type=int, dest="K",
