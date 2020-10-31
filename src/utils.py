@@ -198,21 +198,21 @@ def load_kitti_data(vid_dir, data_path, resize_h, K, T, vid_type='03'):
   resize_shape = (resize_h, int(img_w * r))
   num_channels = vid.shape[-1]
   
-  seq = np.zeros((K+T, *resize_shape, num_channels), dtype="float32")
+  seq = np.zeros((K+T, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
   
   for t in xrange(0, K+T):
     img = cv2.resize(vid[stidx + t], resize_shape[::-1])
     seq[t] = img[..., np.newaxis] if num_channels == 1 else img
     seq[t] = inverse_transform(transform(seq[t]))
   
-  diff = np.zeros((K-1, *resize_shape, num_channels), dtype="float32")
+  diff = np.zeros((K-1, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
   
   for t in xrange(1, K):
     prev = seq[t-1]
     next = seq[t]
     diff[t-1] = next.astype('float32') - prev.astype('float32')
   
-  accel= np.zeros((K-2, *resize_shape, num_channels), dtype="float32")
+  accel= np.zeros((K-2, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
   
   for t in xrange(1, K-1):
     prev_diff= diff[t-1]
