@@ -17,7 +17,7 @@ from argparse import ArgumentParser
 from joblib import Parallel, delayed
 
 
-def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
+def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
          T, num_iter, gpu):
     data_path = "../data/KITTI/"
     with open(data_path+"train.txt", "r") as f:
@@ -52,8 +52,6 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
         gpus = False  # checking for GPU availability
     else:
         gpus = True
-
-    image_w = int((image_h / 375.0) * 1242)
 
     # Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else
     with tf.device("/gpu:0"):
@@ -99,13 +97,8 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
                         accel_batch = np.zeros((batch_size, K-2, image_h, image_w,
                                                 1), dtype="float32")
                         t0 = time.time()
-                        # Ts = np.repeat(np.array([T]), batch_size, axis=0)
-                        # Ks = np.repeat(np.array([K]), batch_size, axis=0)
-                        # paths = np.repeat(data_path, batch_size, axis=0)
                         tfiles = np.array(trainfiles)[batchidx]
-                        # shapes = np.repeat(
-                        #     np.array([image_ht]), batch_size, axis=0)
-                        output = parallel(delayed(load_kitti_data)(f, data_path, image_h, K, T, vid_type)
+                        output = parallel(delayed(load_kitti_data)(f, data_path, (image_h, image_w), K, T, vid_type)
                                           for f in tfiles)
                         print seq_batch[0].shape, output[0][0].shape
                         for i in xrange(batch_size):
@@ -224,6 +217,8 @@ if __name__ == "__main__":
                         default=0.02, help="GAN loss weight")
     parser.add_argument("--image_h", type=int, dest="image_h",
                         default=128, help="Frame height")
+    parser.add_argument("--image_w", type=int, dest="image_w",
+                        default=424, help="Frame width")
     parser.add_argument("--vid_type", type=str, dest="vid_type",
                         default='03', help="Grayscale/color, right/left stereo recordings")
     parser.add_argument("--K", type=int, dest="K",

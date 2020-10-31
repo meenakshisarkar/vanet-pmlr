@@ -164,17 +164,17 @@ def load_s1m_data(f_name, data_path, trainlist, K, T):
       vid_path = data_path + f_name
   return seq, diff
 
-def load_kitti_data(vid_dir, data_path, resize_h, K, T, vid_type='03'):
+def load_kitti_data(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
   
   """
   Arguments:
 
-    vid_dir: date_drive folder e.g. 2011_09_26_drive_00002_sync
-    data_path: base path
-    resize_h: height to which each frame would be resized, resize_w is computed based on aspect ratio
-    K: num input time steps
-    T: num output time steps
-    vid_type: grayscale/color, left/right stereo imgs
+      vid_dir: date_drive folder e.g. 2011_09_26_drive_00002_sync
+      data_path: base path
+      resize_shape: shape to which each frame would be resized
+      K: num input time steps
+      T: num output time steps
+      vid_type: grayscale/color, left/right stereo imgs
   Returns:
 
       seq: K+T length video sequence
@@ -193,9 +193,6 @@ def load_kitti_data(vid_dir, data_path, resize_h, K, T, vid_type='03'):
   assert low <= high, 'video length shorter than K+T'
   
   stidx = np.random.randint(low, high)
-  img_h, img_w = vid.shape[1:3]
-  r = resize_h / img_h
-  resize_shape = (resize_h, int(img_w * r))
   num_channels = vid.shape[-1]
   
   seq = np.zeros((K+T, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
