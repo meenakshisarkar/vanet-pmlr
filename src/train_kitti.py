@@ -78,8 +78,8 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
 
         g_sum = tf.summary.merge([model.L_p_sum,
                                   model.L_stgdl_sum, model.L_sum,])
-        # d_sum = tf.summary.merge([model.d_loss_real_sum,
-        #                           model.d_loss_fake_sum, model.d_loss_sum])
+        d_sum = tf.summary.merge([model.d_loss_real_sum,
+                                  model.d_loss_fake_sum, model.d_loss_sum])
         writer = tf.summary.FileWriter(summary_dir, sess.graph)
 
         counter = iters+1
@@ -130,15 +130,15 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
                                             samples_dir+"accel_inputs_to_network_mod%s.png" % (iters))
 # need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
 
-                        # if updateD:
+                        if updateD:
 
-                        #   _, summary_str = sess.run([d_optim, d_sum],
-                        #                              feed_dict={model.velocity: diff_batch,
-                        #                                         model.accelaration: accel_batch,
-                        #                                         model.xt: seq_batch[:,K-1,:,:,:],
-                        #                                         model.target: seq_batch})
-                        #   writer.add_summary(summary_str, counter)
-                        # print "here there"
+                          _, summary_str = sess.run([d_optim, d_sum],
+                                                     feed_dict={model.velocity: diff_batch,
+                                                                model.accelaration: accel_batch,
+                                                                model.xt: seq_batch[:,K-1,:,:,:],
+                                                                model.target: seq_batch})
+                          writer.add_summary(summary_str, counter)
+                        print "here there"
                         if updateG:
                             _, summary_str = sess.run([g_optim, g_sum],
                                                       feed_dict={model.velocity: diff_batch,
@@ -158,18 +158,18 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
                                                               model.accelaration: accel_batch,
                                                               model.xt: seq_batch[:,K-1,:,:,:],
                                                               model.target: seq_batch})
-                        # errG = model.L_gen.eval({model.velocity: diff_batch,
-                        #                               model.accelaration: accel_batch,
-                        #                               model.xt: seq_batch[:,K-1,:,:,:],
-                        #                               model.target: seq_batch})
+                        errG = model.L_gen.eval({model.velocity: diff_batch,
+                                                      model.accelaration: accel_batch,
+                                                      model.xt: seq_batch[:,K-1,:,:,:],
+                                                      model.target: seq_batch})
 
-                        # if errD_fake < margin or errD_real < margin:
-                        #   updateD = False
-                        # if errD_fake > (1.-margin) or errD_real > (1.-margin):
-                        #   updateG = False
-                        # if not updateD and not updateG:
-                        #   updateD = True
-                        #   updateG = True
+                        if errD_fake < margin or errD_real < margin:
+                          updateD = False
+                        if errD_fake > (1.-margin) or errD_real > (1.-margin):
+                          updateG = False
+                        if not updateD and not updateG:
+                          updateD = True
+                          updateG = True
 
                         counter += 1
 
