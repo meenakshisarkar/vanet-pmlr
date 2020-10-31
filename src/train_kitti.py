@@ -57,7 +57,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     with tf.device("/gpu:0"):
         model = VANET(image_size=[image_h, image_w], c_dim=3,
                          timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
-
+        d_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
+            model.d_loss, var_list=model.d_vars)
         g_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
             alpha*model.reconst_loss, var_list=model.g_vars)
 
@@ -91,14 +92,14 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                 for _, batchidx in mini_batches:
                     if len(batchidx) == batch_size:
                         seq_batch = np.zeros((batch_size, K+T, image_h, image_w,
-                                              1), dtype="float32")
+                                              3), dtype="float32")
                         diff_batch = np.zeros((batch_size, K-1, image_h, image_w,
-                                               1), dtype="float32")
+                                               3), dtype="float32")
                         accel_batch = np.zeros((batch_size, K-2, image_h, image_w,
-                                                1), dtype="float32")
+                                                3), dtype="float32")
                         t0 = time.time()
                         tfiles = np.array(trainfiles)[batchidx]
-                        output = parallel(delayed(load_kitti_data)(f, data_path, (image_h, image_w), K, T, vid_type)
+                        output = parallel(delayed(load_kitti_data)(f.strip(), data_path, (image_h, image_w), K, T, vid_type)
                                           for f in tfiles)
                         print seq_batch[0].shape, output[0][0].shape
                         for i in xrange(batch_size):
