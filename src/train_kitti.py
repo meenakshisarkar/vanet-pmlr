@@ -57,7 +57,7 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
 
     # Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else
     with tf.device("/gpu:0"):
-        model = VANET(image_size=[image_h, image_w], c_dim=1,
+        model = VANET(image_size=[image_h, image_w], c_dim=3,
                          timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
 
         g_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
