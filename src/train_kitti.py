@@ -7,6 +7,7 @@ import tensorflow as tf
 import scipy.misc as sm
 import numpy as np
 import scipy.io as sio
+import os
 
 from vanet import VANET
 from utils import *
@@ -84,7 +85,7 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
 
         counter = iters+1
         start_time = time.time()
-
+        rem_ip_samples, rem_gen_samples, rem_model = [], [], []
         with Parallel(n_jobs=batch_size) as parallel:
             while iters < num_iter:
                 mini_batches = get_minibatches_idx(
@@ -128,6 +129,16 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
                             print("Saving accelaration_sample ...")
                             save_images(samples[:,:,:,::-1], [1, K-2],
                                             samples_dir+"accel_inputs_to_network_mod%s.png" % (iters))
+                            if len(rem_ip_samples) > 2:
+                                for f in rem_ip_samples.pop(0):
+                                    if os.path.exists(f):
+                                        os.remove(f)
+                            curr_sample = ["image_inputs_to_network_mod%s.png" % (iters),
+                            "velo_inputs_to_network_mod%s.png" % (iters),
+                            "accel_inputs_to_network_mod%s.png" % (iters)]
+                            curr_sample = tuple([os.path.join(samples_dir, f) for f in curr_sample])
+                            rem_ip_samples.append(curr_sample)
+
 # need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
 
                         if updateD:
@@ -190,6 +201,11 @@ def main(lr, batch_size, alpha, beta, image_h, vid_type, K,
                             print("Saving sample ...")
                             save_images(samples[:, :, :, ::-1], [2, T],
                                         samples_dir+"train_%s.png" % (iters))
+                            if len(rem_gen_samples) > 2:
+                                f = rem_gen_samples.pop(0)
+                                if os.path.exists(f):
+                                    os.path.remove(f)
+                                rem_gen_samples.append(os.path.join(samples_dir, "train_%s.png" % (iters)))
                         if np.mod(iters, 500) == 0:
                             model.save(sess, checkpoint_dir, counter)
 
