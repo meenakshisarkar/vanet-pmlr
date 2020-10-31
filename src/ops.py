@@ -232,7 +232,7 @@ def stgdl(gen_frames, gt_frames, alpha, image_size, channel_no):
   grad_diff_dx = tf.abs(gt_ddx - gen_ddx)
   grad_diff_dy = tf.abs(gt_ddy - gen_ddy)
   grad_diff_dt = tf.abs(gt_ddt - gen_ddt)
-  grad_diff_dt = tf.reshape(grad_diff_dt, [-1, image_size, image_size, channel_no])
+  grad_diff_dt = tf.reshape(grad_diff_dt, [-1, image_size[0], image_size[1], channel_no])
 
   velocity_loss = (tf.reduce_mean((grad_diff_dt**alpha + grad_diff_dx ** alpha + grad_diff_dy ** alpha)))
 
