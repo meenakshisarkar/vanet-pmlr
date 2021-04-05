@@ -92,8 +92,20 @@ class VANET(object):
             #################reconstruction losses
             self.L_p = tf.reduce_mean(
                 tf.square(self.G - self.target[:, self.timesteps:, :, :, :]))
-            self.L_stgdl= stgdl(self.G, self.target[:,self.timesteps:, :, :,  :],1.0, self.image_size, channel_no=self.c_dim)
+            # self.L_stgdl= stgdl(self.G, self.target[:,self.timesteps:, :, :,  :],1.0, self.image_size, channel_no=self.c_dim)
+            gen_frames = self.G
+            gt_frames = self.target[:, self.timesteps:, ...]
 
+            # Compute the vel and acc maps from gen and gt frames
+            gt_vel_map = gt_frames[:, 1:, ...] - gt_frames[:, :-1, ...]
+            gen_vel_map = gen_frames[:, 1:, ...] - gen_frames[:, :-1, ...]
+            gt_acc_map = gt_vel_map[:, 1:, ...] - gt_vel_map[:, :-1, ...]
+            gen_acc_map = gen_vel_map[:, 1:, ...] - gen_vel_map[:, :-1, ...]
+
+            # Compute the gdl and vgdl loss
+            gdl = stgdl_v2(gen_frames, gt_frames, gen_vel_map, gt_vel_map, 1.0, self.image_size, channel_no=self.c_dim)
+            vgdl = stgdl_v2(gen_vel_map, gt_vel_map, gen_acc_map, gt_acc_map, 1.0, self.image_size, channel_no=self.c_dim)
+            self.L_stgdl = gdl + vgdl
             self.reconst_loss= self.L_p+2*self.L_stgdl
 
 

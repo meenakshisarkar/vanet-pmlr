@@ -8,7 +8,7 @@ import scipy.misc as sm
 import numpy as np
 import scipy.io as sio
 
-from vanet_v2 import VANET_v2
+from vanet import VANET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -25,7 +25,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
   updateD = True
   updateG = True
   iters = 0
-  prefix  = ("KTH_VANET_v2"
+  prefix  = ("KTH_VANET"
           + "_image_size="+str(image_size)
           + "_K="+str(K)
           + "_T="+str(T)
@@ -52,8 +52,9 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     gpus= True
 
 
-  with tf.device("/cpu:0"):             #Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else 
-    model = VANET_v2(image_size=[image_size,image_size], c_dim=1,
+  with tf.device("/gpu:{}".format(gpu)):             
+##Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else 
+    model = VANET(image_size=[image_size,image_size], c_dim=1,
                   timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
     d_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(
         model.d_loss, var_list=model.d_vars)
@@ -222,7 +223,7 @@ if __name__ == "__main__":
   parser.add_argument("--num_iter", type=int, dest="num_iter",
                       default=10000, help="Number of iterations")
   parser.add_argument("--gpu", type=int, nargs="+", dest="gpu", required=False,
-                      default=0, help="GPU device id")
+                      default=1, help="GPU device id")
 
   args = parser.parse_args()
   main(**vars(args))

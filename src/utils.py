@@ -217,3 +217,16 @@ def load_kitti_data(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
     accel[t-1]= next_diff - prev_diff  
   
   return seq, diff, accel
+
+def load_bair_data(vid_dir, K, T):
+    vid_frames = []
+    seq_len = K+T
+    for i in range(seq_len):
+        fname = "{}/{}.png".format(vid_dir, i)
+        im = scipy.misc.imread(fname).reshape(1, 64, 64, 3)
+        vid_frames.append(im/255.)
+    vid = np.concatenate(vid_frames, axis=0)
+    diff = vid[1:K, ...] - vid[:K-1, ...]
+    accel = diff[1:, ...] - diff[:-1, ...]
+    return vid, diff, accel
+

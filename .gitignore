@@ -1,4 +1,4 @@
-
+data/
 src/.DS_Store
 data/KTH/.DS_Store
 .DS_Store
@@ -10,3 +10,10 @@ models/KTH/Paper_model/checkpoint 01-32-56-427
 .DS_Store
 *.mp4
 *.json
+*.pyc
+clean_ckpts.sh
+logs/
+models/
+results/
+*.swp
+
