@@ -5,14 +5,17 @@ import time
 import ssim
 import imageio
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+tf.random.set_random_seed(77)
 import scipy.misc as sm
 import scipy.io as sio
 import numpy as np
 import skimage.measure as measure
+import skimage.metrics as metrics
 
 from vanet import VANET
-from vnet import VNET
+# from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -31,9 +34,13 @@ def main(prefix, image_h, image_w, K, T, gpu):
     c_dim = 3
     resize_shape = (image_h, image_w)
     iters = 100
-    samples_dir= "../results/images/test_bair"
-    checkpoint_dir="../models/BAIR_Full_VANET_image_h=64_K=10_T=10_batch_size=32_alpha=1.0_beta=0.02_lr=0.0001_no_iteration500/"
-    best_model = "VANET.model-1002"
+    samples_dir= "../results/images/test_bair/"
+    # checkpoint_dir="../models/BAIR_Full_VANET_GPU_id=1_image_h=64_K=10_T=10_batch_size=8_alpha=1.0_beta=0.001_lr=0.0001_no_iteration150000/"
+    # best_model = "VANET.model-151000"
+    model_spec="BAIR_Full_VANET_GPU_id=0_image_h=64_K=10_T=10_batch_size=16_alpha=1.0_beta=0.001_lr=0.0001_no_iteration150000"
+    checkpoint_dir="../models/"+model_spec+"/"
+    best_model = "VANET.model-151000"
+
     #   else:
     #     checkpoint_dir = "../models/"+prefix+"/"
     #     best_model = None # will pick last model
@@ -58,7 +65,7 @@ def main(prefix, image_h, image_w, K, T, gpu):
             print(" [!] Load failed... exitting")
             return
 
-        quant_dir = "../results/quantitative/BAIR/"+prefix+"/"
+        quant_dir = "../results/quantitative/BAIR/"+prefix+"/"+model_spec+"/"
         save_path = quant_dir+"results_model="+model_name+".npz"
         if not exists(quant_dir):
             makedirs(quant_dir)
@@ -67,7 +74,7 @@ def main(prefix, image_h, image_w, K, T, gpu):
         vid_names = []
         psnr_err = np.zeros((0, T))
         ssim_err = np.zeros((0, T))
-        for i in xrange(len(test_dirs)):
+        for i in range(len(test_dirs)):
             
             d = test_dirs[i]
             seq_batch, diff_batch, accel_batch = load_bair_data(d, K, T)
@@ -82,9 +89,9 @@ def main(prefix, image_h, image_w, K, T, gpu):
             #             samples_dir+"xt_input_to_network_mod%s.png" % (iters))
             pred_data = sess.run([model.G],
                                     feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
-            print pred_data.shape
-            savedir = os.path.join('../results/images/BAIR/','/'.join(d.split('/')[-3:]))
-            print savedir 
+            print (pred_data.shape)
+            savedir = os.path.join('../results/images/BAIR/'+model_spec,'/'.join(d.split('/')[-3:]))
+            print (savedir )
         # pred_data= pred_data[0]
         # print pred_data.shape
             if not os.path.exists(savedir):
@@ -99,11 +106,12 @@ def main(prefix, image_h, image_w, K, T, gpu):
             cssim = np.zeros((K+T,))
             pred_data = np.concatenate((seq_batch[:,:K,:,:,:], pred_data),axis=1)
             true_data = np.concatenate((seq_batch[:,:K,:,:,:], true_data),axis=1)
-            for t in xrange(K+T):
+            for t in range(K+T):
                 pred = ((pred_data[0,t,:,:,:])*255).astype("uint8")    #.astype("uint8")
                 target = ((true_data[0,t,:,:,:])*255).astype("uint8")         #.astype("uint8")
-                cpsnr[t] = measure.compare_psnr(pred,target)
-                cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
+                cpsnr[t] = metrics.peak_signal_noise_ratio(pred,target)
+                # cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
+                # cssim[t] = metrics.structural_similarity(target, pred)
                 pred = draw_frame(pred, t < K)
                 target = draw_frame(target, t < K)
 
@@ -135,8 +143,10 @@ def main(prefix, image_h, image_w, K, T, gpu):
             psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
             ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
 
-        np.savez(save_path, psnr=psnr_err, ssim=ssim_err)
+        # np.savez(save_path, psnr=psnr_err, ssim=ssim_err)
+        np.savez(save_path, psnr=psnr_err)
         print("Results saved to "+save_path)
+
     print("Done.")
 
 if __name__ == "__main__":

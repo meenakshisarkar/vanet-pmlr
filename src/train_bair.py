@@ -3,14 +3,17 @@ import sys
 import time
 import imageio
 
-import tensorflow as tf
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+tf.random.set_random_seed(77)
 import scipy.misc as sm
 import numpy as np
 import scipy.io as sio
 import os
 
 from vanet import VANET
-from vnet import VNET
+# from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -18,10 +21,10 @@ from argparse import ArgumentParser
 from joblib import Parallel, delayed
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, K,
-         T, num_iter, gpu, train_gen_only, model_name):
+         T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1):
     data_path = "../data/BAIR/processed_data/train"
     train_dirs=[]
     for d1 in os.listdir(data_path):
@@ -30,8 +33,11 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
     margin = 0.3
     updateD = True
     updateG = True
-    iters = 0
+    # updateG = False
+    # iters = 0
+    iters=iters_start
     prefix = ("BAIR_Full_{}".format(model_name)
+              + "_GPU_id="+str(gpu)
               + "_image_h="+str(image_h)
               + "_K="+str(K)
               + "_T="+str(T)
@@ -39,7 +45,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
               + "_alpha="+str(alpha)
               + "_beta="+str(beta)
               + "_lr="+str(lr)
-              +"_no_iteration"+str(num_iter))
+              +"_no_iteration"+str(num_iter)
+              +"_beta1"+str(beta1))
 
     print("\n"+prefix+"\n")
     checkpoint_dir = "../models/"+prefix+"/"
@@ -52,11 +59,13 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
         makedirs(samples_dir)
     if not exists(summary_dir):
         makedirs(summary_dir)
+    # lr=0.0000000001   ###for the other simulation lr =0.10-13
+    # num_iter=120000
 
     # if gpu == 0:
     #     gpus = False  # checking for GPU availability
     # else:
-    #     gpus = True
+        gpus = True
 
     # Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else
     with tf.device("/gpu:{}".format(gpu)):
@@ -70,13 +79,18 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
             raise ValueError('Model {} undefined'.format(model_name))
 
         if train_gen_only:
-            g_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(model.reconst_loss, var_list=model.g_vars) 
-        
+            # g_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(model.reconst_loss, var_list=model.g_vars) 
+            g_optim = tf.train.AdamOptimizer(lr, beta1).minimize(model.reconst_loss, var_list=model.g_vars) 
+       
         else:
             d_optim, g_optim = (
-                tf.train.AdamOptimizer(lr, beta1=0.5).minimize(model.d_loss, var_list=model.d_vars), 
-                tf.train.AdamOptimizer(lr, beta1=0.5).minimize(alpha*model.reconst_loss+beta*model.L_gen, var_list=model.g_vars)
+                # tf.train.AdamOptimizer(lr, beta1=0.5).minimize(model.d_loss, var_list=model.d_vars), 
+                # tf.train.AdamOptimizer(lr, beta1=0.5).minimize(alpha*model.reconst_loss+beta*model.L_gen, var_list=model.g_vars)
+                tf.train.AdamOptimizer(lr, beta1).minimize(model.d_loss, var_list=model.d_vars), 
+                tf.train.AdamOptimizer(lr, beta1).minimize(alpha*model.reconst_loss+beta*model.L_gen, var_list=model.g_vars)
                 )
+# 
+
 
     # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
     gpu_options = tf.GPUOptions(allow_growth=True)
@@ -86,7 +100,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
         tf.global_variables_initializer().run()
 
         success_load_model = model.load(sess, checkpoint_dir)
-        print success_load_model[0]
+        print (success_load_model[0])
 
         if success_load_model[0]:
             print(" [*] Load SUCCESS")
@@ -124,7 +138,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
                         tdirs = np.array(train_dirs)[batchidx]
                         output = parallel(delayed(load_bair_data)(d, K, T) for d in tdirs)
                         # print seq_batch[0].shape, output[0][0].shape
-                        for i in xrange(batch_size):
+                        for i in range(batch_size):
                             seq_batch[i] = output[i][0]
                             diff_batch[i] = output[i][1]
                             accel_batch[i] = output[i][2]
@@ -157,10 +171,12 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
 
                         # need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
                         model_input = {model.velocity: diff_batch,
+                                            model.accelaration: accel_batch,
                                             model.xt: seq_batch[:, K-1, :, :],
                                             model.target: seq_batch}
-                        if model_name == 'VANET': model_input[model.accelaration] = accel_batch
-                        if train_gen_only:
+                        # if model_name == 'VANET': model_input[model.accelaration] = accel_batch
+                        # if train_gen_only or iters<=60000:
+                        if train_gen_only :
                             _, summary_str = sess.run([g_optim, g_sum],
                                                         feed_dict= model_input)
                             writer.add_summary(summary_str, counter)
@@ -184,24 +200,52 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
                                 
                                 _, summary_str = sess.run([g_optim, g_sum],
                                                             feed_dict=model_input)
-                            writer.add_summary(summary_str, counter)
+                            # writer.add_summary(summary_str, counter)
+
+                            errG_L_sum = model.L_p.eval(model_input)
+                            
+                            errG_L_stgdl_sum = model.L_stgdl.eval(model_input)
 
                             errD_fake = model.d_loss_fake.eval(model_input)
                             errD_real = model.d_loss_real.eval(model_input)
                             errG = model.L_gen.eval(model_input)
 
+                            # if errD_fake < margin or errD_real < margin:
+                            #     if errD_fake< 0.5:
+                            #         print("Not! updating Discriminator")
+                            #         if iters/500>122 and updateD == False: exit()
+                            #         updateD = False
+                            # if errD_fake > (1.-margin) or errD_real > (1.-margin):
+                            #     updateD = True
+                            #     print("Updating Discriminator")
                             if errD_fake < margin or errD_real < margin:
                                 updateD = False
+                                print("Not! updating Discriminator")
+                            
                             if errD_fake > (1.-margin) or errD_real > (1.-margin):
                                 updateG = False
+                                print("Not! updating generator")
+                            
                             if not updateD and not updateG:
                                 updateD = True
                                 updateG = True
+                                print("Updating both Generator and Discriminator")
 
                             print(
-                                    "Iters: [%2d], d_loss: %.8f, L_GAN: %.8f" 
-                                    % (iters, errD_fake+errD_real,errG)
+                                    "Iters: [%2d], d_loss: %.8f, L_GAN: %.8f, errD_fake: %.8f, errD_real: %.8f" 
+                                    % (iters, errD_fake+errD_real,errG, errD_fake,errD_real)
                                 )
+                            print(
+                                    "Iters: [%2d], reconstruction_loss: %.8f, Error_L_p: %.8f, Error_L_stgdl: %.8f" 
+                                    % (iters, errG_L_sum+errG_L_stgdl_sum,errG_L_sum, errG_L_stgdl_sum)
+                                )
+                            print("Updating Generator: "+str(updateG))
+                            print("Updating Discriminator: "+str(updateD))
+
+                            # print(
+                            #         "Iters: [%2d], d_loss: %.8f, L_GAN: %.8f" 
+                            #         % (iters, errD_fake+errD_real,errG)
+                            #     )
                         
                         counter+=1
 
@@ -214,13 +258,13 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
                             print("Saving sample ...")
                             save_images(samples[:, :, :, ::-1], [2, T],
                                         samples_dir+"train_%s.png" % (iters))
-                            if len(rem_gen_samples) > 10:
+                            if len(rem_gen_samples) > 1000:
                                 f = rem_gen_samples.pop(0)
                                 if os.path.exists(f):
                                     os.remove(f)
                             rem_gen_samples.append(os.path.join(samples_dir, "train_%s.png" % (iters)))
                             #rem_gen_samples.append(samples_dir+"train_%s.png" % (iters))
-                        if np.mod(counter, 500) == 2:
+                        if np.mod(counter, 500) == 0:
                             model.save(sess, checkpoint_dir, counter)
 
                         iters += 1
@@ -231,11 +275,11 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, dest="lr",
                         default=0.0001, help="Base Learning Rate")
     parser.add_argument("--batch_size", type=int, dest="batch_size",
-                        default=64, help="Mini-batch size")
+                        default=8, help="Mini-batch size")
     parser.add_argument("--alpha", type=float, dest="alpha",
                         default=1.0, help="Image loss weight")
     parser.add_argument("--beta", type=float, dest="beta",
-                        default=0.02, help="GAN loss weight")
+                        default=0.0001, help="GAN loss weight")
     parser.add_argument("--image_h", type=int, dest="image_h",
                         default=64, help="Frame height")
     parser.add_argument("--image_w", type=int, dest="image_w",
@@ -247,10 +291,13 @@ if __name__ == "__main__":
     parser.add_argument("--T", type=int, dest="T",
                         default=10, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",
-                        default=500, help="Number of iterations")
+                        default=150000, help="Number of iterations")
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
-                        default=1, help="GPU device id")
+                        default=0, help="GPU device id")
+    parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
+                        default=0.5, help="beta1 decay rate")
     parser.add_argument("-train_gen_only", default=False, action='store_true')
+    parser.add_argument("--iters_start", type=int,  dest="iters_start", required=False, default=0, help='iteration_starts')
 
     args = parser.parse_args()
     main(**vars(args))

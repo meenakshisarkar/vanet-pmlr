@@ -3,14 +3,15 @@ import sys
 import time
 import imageio
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import scipy.misc as sm
 import numpy as np
 import scipy.io as sio
 import os
 
 from vanet import VANET
-from vnet import VNET
+# from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -18,18 +19,19 @@ from argparse import ArgumentParser
 from joblib import Parallel, delayed
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
-         T, num_iter, gpu, train_gen_only, model_name):
+         T, num_iter, gpu, train_gen_only, model_name,iters_start):
     data_path = "../data/KITTI/"
     with open(data_path+"train_wo_campus.txt", "r") as f:
         trainfiles = f.readlines()
     margin = 0.3
     updateD = True
     updateG = True
-    iters = 0
+    iters = iters_start
     prefix = ("KITTI_Full_{}".format(model_name)
+              + "_GPU_id="+str(gpu)
               + "_image_h="+str(image_h)
               + "_K="+str(K)
               + "_T="+str(T)
@@ -37,7 +39,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
               + "_alpha="+str(alpha)
               + "_beta="+str(beta)
               + "_lr="+str(lr)
-              +"_no_iteration"+str(num_iter)+ '_wo_campus')
+              +"_no_iteration="+str(num_iter)+ '_wo_campus')
 
     print("\n"+prefix+"\n")
     checkpoint_dir = "../models/"+prefix+"/"
@@ -84,7 +86,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
         tf.global_variables_initializer().run()
 
         success_load_model = model.load(sess, checkpoint_dir)
-        print success_load_model[0]
+        print(success_load_model[0])
 
         if success_load_model[0]:
             print(" [*] Load SUCCESS")
@@ -123,7 +125,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                         output = parallel(delayed(load_kitti_data)(f.strip(), data_path, (image_h, image_w), K, T, vid_type)
                                           for f in tfiles)
                         # print seq_batch[0].shape, output[0][0].shape
-                        for i in xrange(batch_size):
+                        for i in range(batch_size):
                             seq_batch[i] = output[i][0]
                             diff_batch[i] = output[i][1]
                             accel_batch[i] = output[i][2]
@@ -160,7 +162,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                                             model.xt: seq_batch[:, K-1, :, :],
                                             model.target: seq_batch}
                         # if model_name == 'VANET': model_input['model.accelaration'] = accel_batch
-                        if train_gen_only:
+                        if train_gen_only or iters<500:
                             _, summary_str = sess.run([g_optim, g_sum],
                                                         feed_dict= model_input)
                             writer.add_summary(summary_str, counter)
@@ -185,6 +187,10 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                                 _, summary_str = sess.run([g_optim, g_sum],
                                                             feed_dict=model_input)
                             writer.add_summary(summary_str, counter)
+                            errG_L_sum = model.L_p.eval(model_input)
+                            
+                            errG_L_stgdl_sum = model.L_stgdl.eval(model_input)
+
 
                             errD_fake = model.d_loss_fake.eval(model_input)
                             errD_real = model.d_loss_real.eval(model_input)
@@ -199,8 +205,12 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                                 updateG = True
 
                             print(
-                                    "Iters: [%2d], d_loss: %.8f, L_GAN: %.8f" 
-                                    % (iters, errD_fake+errD_real,errG)
+                                    "Iters: [%2d], d_loss: %.8f, L_GAN: %.8f, errD_fake: %.8f, errD_real: %.8f" 
+                                    % (iters, errD_fake+errD_real,errG, errD_fake,errD_real)
+                                )
+                            print(
+                                    "Iters: [%2d], reconstruction_loss: %.8f, Error_L_p: %.8f, Error_L_stgdl: %.8f" 
+                                    % (iters, errG_L_sum+errG_L_stgdl_sum,errG_L_sum, errG_L_stgdl_sum)
                                 )
                         
                         counter+=1
@@ -251,8 +261,9 @@ if __name__ == "__main__":
     parser.add_argument("--num_iter", type=int, dest="num_iter",
                         default=100000, help="Number of iterations")
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
-                        default=1, help="GPU device id")
-    parser.add_argument("-train_gen_only", default=False, action='store_true')
+                        default=0, help="GPU device id")
+    parser.add_argument("--train_gen_only", default=False, action='store_true')
+    parser.add_argument("--iters_start", type=int,  dest="iters_start", required=False, default=0, help='iteration_starts')
 
     args = parser.parse_args()
     main(**vars(args))

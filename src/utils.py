@@ -17,8 +17,10 @@ def inverse_transform(images):
     return (images+1.)/2.
 
 
+# def save_images(images, size, image_path):
+#   return imsave((images)*255., size, image_path)
 def save_images(images, size, image_path):
-  return imsave((images)*255., size, image_path)
+    return imsave(np.int32((images+1.)*255./2.), size, image_path)
 
 
 def merge(images, size):
@@ -27,14 +29,14 @@ def merge(images, size):
 
   for idx, image in enumerate(images):
     i = idx % size[1]
-    j = idx / size[1]
+    j = idx // size[1]
     img[j*h:j*h+h, i*w:i*w+w, :] = image
 
   return img
 
 
 def imsave(images, size, path):
-  return scipy.misc.imsave(path, merge(images, size))
+  return imageio.imwrite(path, merge(images, size))
 
 
 def get_minibatches_idx(n, minibatch_size, shuffle=False):
@@ -101,7 +103,7 @@ def load_kth_data(f_name, data_path, image_size, K, T):
     stidx = np.random.randint(low=low, high=high)
   seq = np.zeros((K+T, image_size, image_size, 1), dtype="float32")
   # print seq.shape
-  for t in xrange(0,K+T):
+  for t in range(0,K+T):
     img = cv2.cvtColor(cv2.resize(vid.get_data(stidx+t),
                        (image_size,image_size)),
                        cv2.COLOR_RGB2GRAY)
@@ -111,12 +113,12 @@ def load_kth_data(f_name, data_path, image_size, K, T):
   #   seq = seq[:-1,:,:]
 
   diff = np.zeros((K-1, image_size, image_size, 1), dtype="float32")
-  for t in xrange(1,K):
+  for t in range(1,K):
     prev = seq[t-1,:,:]
     next = seq[t,:,:]
     diff[t-1,:,:] = next.astype("float32")-prev.astype("float32")
   accel= np.zeros((K-2, image_size,image_size,1),dtype="float32")
-  for t in xrange(1,K-1):
+  for t in range(1,K-1):
     prev_diff= diff[t-1,:, :]
     next_diff= diff[t,:,:]
     accel[t-1,:,:]= next_diff.astype("float32")-prev_diff.astype("float32")
@@ -140,7 +142,7 @@ def load_s1m_data(f_name, data_path, trainlist, K, T):
         stidx = np.random.randint(low=low, high=high)
       seq = np.zeros((img_size[0], img_size[1], K+T, 3),
                      dtype="float32")
-      for t in xrange(K+T):
+      for t in range(K+T):
         img = cv2.resize(vid.get_data(stidx+t),
                          (img_size[1],img_size[0]))[:,:,::-1]
         seq[:,:,t] = transform(img)
@@ -150,11 +152,12 @@ def load_s1m_data(f_name, data_path, trainlist, K, T):
 
       diff = np.zeros((img_size[0], img_size[1], K-1, 1),
                       dtype="float32")
-      for t in xrange(1,K):
+      for t in range(1,K):
         prev = inverse_transform(seq[:,:,t-1])*255
         prev = cv2.cvtColor(prev.astype("uint8"),cv2.COLOR_BGR2GRAY)
         next = inverse_transform(seq[:,:,t])*255
         next = cv2.cvtColor(next.astype("uint8"),cv2.COLOR_BGR2GRAY)
+        # diff[:,:,t-1,0] = (next.astype("float32")-prev.astype("float32"))/255.
         diff[:,:,t-1,0] = (next.astype("float32")-prev.astype("float32"))/255.
       break
     except Exception:
@@ -197,24 +200,25 @@ def load_kitti_data(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
   
   seq = np.zeros((K+T, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
   
-  for t in xrange(0, K+T):
+  for t in range(0, K+T):
     img = cv2.resize(vid[stidx + t], resize_shape[::-1])
     seq[t] = img[..., np.newaxis] if num_channels == 1 else img
     seq[t] = inverse_transform(transform(seq[t]))
   
   diff = np.zeros((K-1, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
+  diff = seq[1:K, ...] - seq[:K-1, ...]
+  accel = diff[1:, ...] - diff[:-1, ...]
+  # for t in range(1, K):
+  #   prev = seq[t-1]
+  #   next = seq[t]
+  #   diff[t-1] = next.astype('float32') - prev.astype('float32')
   
-  for t in xrange(1, K):
-    prev = seq[t-1]
-    next = seq[t]
-    diff[t-1] = next.astype('float32') - prev.astype('float32')
+  # accel= np.zeros((K-2, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
   
-  accel= np.zeros((K-2, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
-  
-  for t in xrange(1, K-1):
-    prev_diff= diff[t-1]
-    next_diff= diff[t]
-    accel[t-1]= next_diff - prev_diff  
+  # for t in range(1, K-1):
+  #   prev_diff= diff[t-1]
+  #   next_diff= diff[t]
+  #   accel[t-1]= next_diff - prev_diff  
   
   return seq, diff, accel
 
@@ -223,7 +227,8 @@ def load_bair_data(vid_dir, K, T):
     seq_len = K+T
     for i in range(seq_len):
         fname = "{}/{}.png".format(vid_dir, i)
-        im = scipy.misc.imread(fname).reshape(1, 64, 64, 3)
+        # im = scipy.misc.imread(fname).reshape(1, 64, 64, 3)
+        im = imageio.imread(fname).reshape(1, 64, 64, 3)
         vid_frames.append(im/255.)
     vid = np.concatenate(vid_frames, axis=0)
     diff = vid[1:K, ...] - vid[:K-1, ...]

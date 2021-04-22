@@ -1,7 +1,8 @@
 import sys
 import math
 import numpy as np 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from joblib import Parallel, delayed
 
 from tensorflow.python.framework import ops
@@ -12,8 +13,10 @@ from utils import *
 
 
 def batch_norm(inputs, name, train=True, reuse=False):
-  return tf.contrib.layers.batch_norm(inputs=inputs,is_training=train,
-                                      reuse=reuse,scope=name,scale=True)
+  # return tf.contrib.layers.batch_norm(inputs=inputs,is_training=train,
+  #                                     reuse=reuse,scope=name,scale=True)
+  return tf.layers.batch_normalization(inputs=inputs,training=train,
+                                      reuse=reuse,name=name,scale=True)
 
 def cross_conv(input,kernal, reuse=False, name= None, padding= 'SAME'):
   
@@ -56,8 +59,10 @@ def conv2d(input_, output_dim,
             k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.02,
             name="conv2d", reuse=False, padding='SAME'):
    with tf.variable_scope(name, reuse=reuse):
+     # w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
+     #                     initializer=tf.contrib.layers.xavier_initializer())
      w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
-                         initializer=tf.contrib.layers.xavier_initializer())
+                         initializer=tf.initializers.glorot_uniform())
      conv = tf.nn.conv2d(input_, w, strides=[1, d_h, d_w, 1], padding=padding)
  
      biases = tf.get_variable('biases', [output_dim],
@@ -74,7 +79,8 @@ def deconv2d(input_, output_shape,
     # filter : [height, width, output_channels, in_channels]
     w = tf.get_variable('w', [k_h, k_h, output_shape[-1],
                               input_.get_shape()[-1]],
-                        initializer=tf.contrib.layers.xavier_initializer())
+                        # initializer=tf.contrib.layers.xavier_initializer())
+                        initializer=tf.initializers.glorot_uniform())
     
     try:
       deconv = tf.nn.conv2d_transpose(input_, w,
@@ -194,7 +200,7 @@ def stgdl(gen_frames, gt_frames, alpha, image_size, channel_no):
   filter_y = tf.stack([tf.expand_dims(pos, 0), tf.expand_dims(neg, 0)])
   # [[[-1]],[[1]]]
   filter_t = tf.stack([tf.expand_dims(tf.expand_dims(neg,0),0), tf.expand_dims(tf.expand_dims(pos,0),0)])
-  print filter_t.shape, filter_x.shape, filter_y.shape
+  print (filter_t.shape, filter_x.shape, filter_y.shape)
   strides1 = [1, 1, 1, 1]  # stride of (1, 1)
   strides2= [1, 1, 1, 1, 1] #stride of (1,1,1) for conv3D
   padding = 'SAME'
