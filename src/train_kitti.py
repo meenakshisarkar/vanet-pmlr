@@ -22,10 +22,16 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
-         T, num_iter, gpu, train_gen_only, model_name,iters_start):
-    data_path = "../data/KITTI/"
-    with open(data_path+"train_wo_campus.txt", "r") as f:
-        trainfiles = f.readlines()
+         T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1):
+    data_path = "../data/KITTI/train"
+    train_dirs=[]
+    dirs_len=[]
+    for d1 in os.listdir(data_path):
+    	dirs_len.append(len(os.listdir(os.path.join(data_path, d1, "/image_03/data/"))))
+        train_dirs.append(os.path.join(data_path, d1, "/image_03/data/"))
+    # with open(data_path+"train_wo_campus.txt", "r") as f:
+    #     trainfiles = f.readlines()
+    data_dict= dict(zip(train_dirs,dirs_len))
     margin = 0.3
     updateD = True
     updateG = True
@@ -121,9 +127,13 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                         accel_batch = np.zeros((batch_size, K-2, image_h, image_w,
                                                 3), dtype="float32")
                         #t0 = time.time()
-                        tfiles = np.array(trainfiles)[batchidx]
-                        output = parallel(delayed(load_kitti_data)(f.strip(), data_path, (image_h, image_w), K, T, vid_type)
-                                          for f in tfiles)
+                        # tdirs = np.array(train_dirs)[batchidx]
+                        # output = parallel(delayed(load_kitti_data)(d,l, K, T) for d, l in tdirs)
+                        tdirs = np.array(data_dict)[batchidx]
+                        output = parallel(delayed(load_kitti_data)(d,l,(image_h, image_w) K, T) for d, l in tdirs.items())
+                        # tfiles = np.array(trainfiles)[batchidx]
+                        # output = parallel(delayed(load_kitti_data)(f.strip(), data_path, (image_h, image_w), K, T, vid_type)
+                        #                   for f in tfiles)
                         # print seq_batch[0].shape, output[0][0].shape
                         for i in range(batch_size):
                             seq_batch[i] = output[i][0]
@@ -162,7 +172,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                                             model.xt: seq_batch[:, K-1, :, :],
                                             model.target: seq_batch}
                         # if model_name == 'VANET': model_input['model.accelaration'] = accel_batch
-                        if train_gen_only or iters<500:
+                        if train_gen_only:
                             _, summary_str = sess.run([g_optim, g_sum],
                                                         feed_dict= model_input)
                             writer.add_summary(summary_str, counter)
@@ -245,11 +255,12 @@ if __name__ == "__main__":
     parser.add_argument("--alpha", type=float, dest="alpha",
                         default=1.0, help="Image loss weight")
     parser.add_argument("--beta", type=float, dest="beta",
-                        default=0.02, help="GAN loss weight")
+                        default=0.0001, help="GAN loss weight")
     parser.add_argument("--image_h", type=int, dest="image_h",
                         default=64, help="Frame height")
     parser.add_argument("--image_w", type=int, dest="image_w",
-                        default=208, help="Frame width")
+                        # default=208, help="Frame width")
+                        default=64, help="Frame width")
     parser.add_argument("--vid_type", type=str, dest="vid_type",
                         default='03', help="Grayscale/color, right/left stereo recordings")
     parser.add_argument("--model_name", type=str, dest="model_name",
@@ -259,9 +270,11 @@ if __name__ == "__main__":
     parser.add_argument("--T", type=int, dest="T",
                         default=10, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",
-                        default=100000, help="Number of iterations")
+                        default=150000, help="Number of iterations")
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
                         default=0, help="GPU device id")
+    parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
+                        default=0.5, help="beta1 decay rate")
     parser.add_argument("--train_gen_only", default=False, action='store_true')
     parser.add_argument("--iters_start", type=int,  dest="iters_start", required=False, default=0, help='iteration_starts')
 

@@ -8,6 +8,7 @@ import scipy.misc
 import numpy as np
 import os
 import glob
+from PIL import Image
 
 def transform(image):
     return image/127.5 - 1.
@@ -167,7 +168,7 @@ def load_s1m_data(f_name, data_path, trainlist, K, T):
       vid_path = data_path + f_name
   return seq, diff
 
-def load_kitti_data(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
+def load_kitti_data2(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
   
   """
   Arguments:
@@ -206,21 +207,38 @@ def load_kitti_data(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
     seq[t] = inverse_transform(transform(seq[t]))
   
   diff = np.zeros((K-1, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
-  diff = seq[1:K, ...] - seq[:K-1, ...]
-  accel = diff[1:, ...] - diff[:-1, ...]
-  # for t in range(1, K):
-  #   prev = seq[t-1]
-  #   next = seq[t]
-  #   diff[t-1] = next.astype('float32') - prev.astype('float32')
+  # diff = seq[1:K, ...] - seq[:K-1, ...]
+  # accel = diff[1:, ...] - diff[:-1, ...]
+  for t in range(1, K):
+    prev = seq[t-1]
+    next = seq[t]
+    diff[t-1] = next.astype('float32') - prev.astype('float32')
   
-  # accel= np.zeros((K-2, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
+  accel= np.zeros((K-2, resize_shape[0], resize_shape[1], num_channels), dtype="float32")
   
-  # for t in range(1, K-1):
-  #   prev_diff= diff[t-1]
-  #   next_diff= diff[t]
-  #   accel[t-1]= next_diff - prev_diff  
+  for t in range(1, K-1):
+    prev_diff= diff[t-1]
+    next_diff= diff[t]
+    accel[t-1]= next_diff - prev_diff  
   
   return seq, diff, accel
+
+def load_kitti_data(vid_dir, length, resize_shape, K, T):
+    vid_frames = []
+    low = 0
+    high = length - K - T + 1
+    assert low <= high, 'video length shorter than K+T'
+    stidx = np.random.randint(low, high)
+    for t in range(0, K+T):  
+        fname =  "{}/{:010d}.png".format(vid_dir, t+stidx)
+        im = imageio.imread(fname)
+        im=Image.fromarray(im).resize((resize_shape[0], resize_shape[1]))
+        im = im.reshape(1, resize_shape[0], resize_shape[1], 3)
+        vid_frames.append(im/255.)
+    vid = np.concatenate(vid_frames, axis=0)
+    diff = vid[1:K, ...] - vid[:K-1, ...]
+    accel = diff[1:, ...] - diff[:-1, ...]
+    return vid, diff, accel
 
 def load_bair_data(vid_dir, K, T):
     vid_frames = []
