@@ -5,14 +5,17 @@ import time
 import ssim
 import imageio
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+tf.random.set_random_seed(77)
 import scipy.misc as sm
 import scipy.io as sio
 import numpy as np
 import skimage.measure as measure
+import skimage.metrics as metrics
 
 from vanet import VANET
-from vnet import VNET
+# from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -23,7 +26,7 @@ from PIL import ImageDraw
 
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
-         T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1,future_F):
+         T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1,train_timesteps):
     data_path = "../data/KITTI/test"
     test_dirs=[]
     dirs_len=[]
@@ -34,14 +37,14 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     #     trainfiles = f.readlines()
     data_dict= dict(zip(test_dirs,dirs_len))
     margin = 0.3
-    updateD = True
-    updateG = True
-    iters = iters_start
+    # updateD = True
+    # updateG = True
+    # iters = iters_start
     prefix = ("KITTI_Full_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_w)
               + "_K="+str(K)
-              + "_T="+str(T)
+              + "_T="+str(train_timesteps)
               + "_batch_size="+str(batch_size)
               + "_alpha="+str(alpha)
               + "_beta="+str(beta)
@@ -53,14 +56,16 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     # best_model = "VNET.model-26002"
     samples_dir = "../samples/"+prefix+"/"
     summary_dir = "../logs/"+prefix+"/"
+    best_model = "VANET.model-99500"
+    model_number="model-99500"
 
     with tf.device("/gpu:{}".format(gpu)):
         if model_name == 'VANET':
             model = VANET(image_size=[image_h, image_w], c_dim=3,
-                timesteps=K, batch_size=1, F=future_F, checkpoint_dir=checkpoint_dir)
+                timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
         elif model_name == 'VNET':
             model = VNET(image_size=[image_h, image_w], c_dim=3,
-                timesteps=K, batch_size=1, F=future_F, checkpoint_dir=checkpoint_dir)
+                timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
         else:
             raise ValueError('Model {} undefined'.format(model_name))
     gpu_options = tf.GPUOptions(allow_growth=True)
@@ -69,14 +74,14 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 
         tf.global_variables_initializer().run()
 
-        success_load_model = model.load(sess, checkpoint_dir)
-        print(success_load_model[0])
+        success_load_model = model.load(sess, checkpoint_dir,best_model)
+        # print(success_load_model[0])
 
         if success_load_model[0]:
             print(" [*] Load SUCCESS")
         else:
             print(" [!] Load failed...")
-        quant_dir = "../results/quantitative/KITTI/"+prefix+"/"
+        quant_dir = "../results/quantitative/KITTI/"+prefix+"/"+model_number+"/"
         save_path = quant_dir+"results_model="+model_name+".npz"
         if not exists(quant_dir):
             makedirs(quant_dir)
@@ -86,7 +91,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
         for d, l in data_dict.items():
             
             # d = test_dirs[i]
-            seq_batch, diff_batch, accel_batch = load_KITTI_data(d,l,(image_h, image_w), K, T)
+            seq_batch, diff_batch, accel_batch = load_kitti_data(d,l,(image_h, image_w), K, T)
             seq_batch = seq_batch[None, ...]
             diff_batch = diff_batch[None, ...]
             accel_batch = accel_batch[None, ...]
@@ -99,7 +104,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
             pred_data = sess.run([model.G],
                                     feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
             print (pred_data.shape)
-            savedir = os.path.join('../results/images/KITTI/'+prefix,'/'.join(d.split('/')[-4:]))
+            savedir = os.path.join('../results/images/KITTI/'+prefix+'/'+model_number,'/'.join(d.split('/')[-4:]))
             print (savedir )
         # pred_data= pred_data[0]
         # print pred_data.shape
@@ -180,15 +185,15 @@ if __name__ == "__main__":
     parser.add_argument("--K", type=int, dest="K",
                         default=10, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",
-                        default=10, help="Number of steps into the future")
+                        default=20, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",
                         default=150000, help="Number of iterations")
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
                         default=0, help="GPU device id")
     parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
                         default=0.5, help="beta1 decay rate")
-    parser.add_argument("--future_F", type=int,  dest="future_F", required=False,
-                        default=20, help="future time steps")
+    parser.add_argument("--train_timesteps", type=int,  dest="train_timesteps", required=False,
+                        default=10, help="future time steps")
     parser.add_argument("--train_gen_only", default=False, action='store_true')
     parser.add_argument("--iters_start", type=int,  dest="iters_start", required=False, default=0, help='iteration_starts')
 
