@@ -5,6 +5,7 @@ import imageio
 
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
+tf.random.set_random_seed(77)
 import scipy.misc as sm
 import numpy as np
 import scipy.io as sio
@@ -27,8 +28,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     train_dirs=[]
     dirs_len=[]
     for d1 in os.listdir(data_path):
-    	dirs_len.append(len(os.listdir(os.path.join(data_path, d1, "/image_03/data/"))))
-        train_dirs.append(os.path.join(data_path, d1, "/image_03/data/"))
+        dirs_len.append(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"))))
+        train_dirs.append(os.path.join(data_path, d1+"/image_03/data"))
     # with open(data_path+"train_wo_campus.txt", "r") as f:
     #     trainfiles = f.readlines()
     data_dict= dict(zip(train_dirs,dirs_len))
@@ -38,14 +39,14 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     iters = iters_start
     prefix = ("KITTI_Full_{}".format(model_name)
               + "_GPU_id="+str(gpu)
-              + "_image_h="+str(image_h)
+              + "_image_w="+str(image_w)
               + "_K="+str(K)
               + "_T="+str(T)
               + "_batch_size="+str(batch_size)
               + "_alpha="+str(alpha)
               + "_beta="+str(beta)
               + "_lr="+str(lr)
-              +"_no_iteration="+str(num_iter)+ '_wo_campus')
+              +"_no_iteration="+str(num_iter)+"_beta1"+str(beta1)+'_wo_campus')
 
     print("\n"+prefix+"\n")
     checkpoint_dir = "../models/"+prefix+"/"
@@ -117,7 +118,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
             while iters < num_iter:
                 t0 = time.time()
                 mini_batches = get_minibatches_idx(
-                    len(trainfiles), batch_size, shuffle=True)
+                    # len(trainfiles), batch_size, shuffle=True)
+                    len(train_dirs), batch_size, shuffle=True)
                 for _, batchidx in mini_batches:
                     if len(batchidx) == batch_size:
                         seq_batch = np.zeros((batch_size, K+T, image_h, image_w,
@@ -129,8 +131,10 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                         #t0 = time.time()
                         # tdirs = np.array(train_dirs)[batchidx]
                         # output = parallel(delayed(load_kitti_data)(d,l, K, T) for d, l in tdirs)
-                        tdirs = np.array(data_dict)[batchidx]
-                        output = parallel(delayed(load_kitti_data)(d,l,(image_h, image_w) K, T) for d, l in tdirs.items())
+                        # print(len(data_dict.keys()))
+                        # tdirs = np.array(list(data_dict.keys()))[tuple(batchidx)]
+                        tdirs = np.array(list(data_dict.keys()))[batchidx]
+                        output = parallel(delayed(load_kitti_data)(d, data_dict[d],(image_h, image_w), K, T) for d in tdirs)
                         # tfiles = np.array(trainfiles)[batchidx]
                         # output = parallel(delayed(load_kitti_data)(f.strip(), data_path, (image_h, image_w), K, T, vid_type)
                         #                   for f in tfiles)
@@ -208,12 +212,16 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 
                             if errD_fake < margin or errD_real < margin:
                                 updateD = False
+                                print("Not! updating Discriminator")
                             if errD_fake > (1.-margin) or errD_real > (1.-margin):
                                 updateG = False
+                                print("Not! updating generator")
                             if not updateD and not updateG:
                                 updateD = True
                                 updateG = True
-
+                                print("Updating both Generator and Discriminator")
+                            print("Updating Generator: "+str(updateG))
+                            print("Updating Discriminator: "+str(updateD))
                             print(
                                     "Iters: [%2d], d_loss: %.8f, L_GAN: %.8f, errD_fake: %.8f, errD_real: %.8f" 
                                     % (iters, errD_fake+errD_real,errG, errD_fake,errD_real)
@@ -234,13 +242,13 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                             print("Saving sample ...")
                             save_images(samples[:, :, :, ::-1], [2, T],
                                         samples_dir+"train_%s.png" % (iters))
-                            if len(rem_gen_samples) > 10:
+                            if len(rem_gen_samples) > 1000:
                                 f = rem_gen_samples.pop(0)
                                 if os.path.exists(f):
                                     os.remove(f)
                             rem_gen_samples.append(os.path.join(samples_dir, "train_%s.png" % (iters)))
                             #rem_gen_samples.append(samples_dir+"train_%s.png" % (iters))
-                        if np.mod(counter, 500) == 2:
+                        if np.mod(counter, 500) == 0:
                             model.save(sess, checkpoint_dir, counter)
 
                         iters += 1

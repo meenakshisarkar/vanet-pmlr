@@ -1,6 +1,7 @@
 import os
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
+tf.random.set_random_seed(77)
 # import keras
 import numpy as np
 from BasicConvLSTMCell import BasicConvLSTMCell

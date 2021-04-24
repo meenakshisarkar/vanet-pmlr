@@ -232,8 +232,9 @@ def load_kitti_data(vid_dir, length, resize_shape, K, T):
     for t in range(0, K+T):  
         fname =  "{}/{:010d}.png".format(vid_dir, t+stidx)
         im = imageio.imread(fname)
-        im=Image.fromarray(im).resize((resize_shape[0], resize_shape[1]))
-        im = im.reshape(1, resize_shape[0], resize_shape[1], 3)
+        im=Image.fromarray(im).resize((resize_shape[1], resize_shape[0]))
+        im= np.expand_dims(im, axis=0)
+        # im = im.reshape(1, resize_shape[0], resize_shape[1], 3)
         vid_frames.append(im/255.)
     vid = np.concatenate(vid_frames, axis=0)
     diff = vid[1:K, ...] - vid[:K-1, ...]
