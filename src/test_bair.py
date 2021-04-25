@@ -121,24 +121,24 @@ def main(prefix, image_h, image_w, K, T, gpu):
             cmd1 = "rm "+savedir+"/pred.gif"
             cmd2 = ("ffmpeg -f image2 -framerate 7 -i "+savedir+
                     "/pred_%04d.png "+savedir+"/pred.gif")
-            cmd3 = "rm "+savedir+"/pred*.png"
+            # cmd3 = "rm "+savedir+"/pred*.png"
 
             # Comment out "system(cmd3)" if you want to keep the output images
             # Otherwise only the gifs will be kept
             system(cmd1); 
             system(cmd2) 
-            system(cmd3)
+            # system(cmd3)
 
             cmd1 = "rm "+savedir+"/gt.gif"
             cmd2 = ("ffmpeg -f image2 -framerate 7 -i "+savedir+
                     "/gt_%04d.png "+savedir+"/gt.gif")
-            cmd3 = "rm "+savedir+"/gt*.png"
+            # cmd3 = "rm "+savedir+"/gt*.png"
 
             # Comment out "system(cmd3)" if you want to keep the output images
             # Otherwise only the gifs will be kept
             system(cmd1); 
             system(cmd2); 
-            system(cmd3)
+            # system(cmd3)
 
             psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
             ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
