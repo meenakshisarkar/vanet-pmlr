@@ -125,7 +125,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                 target = ((true_data[0,t,:,:,:])*255).astype("uint8")         #.astype("uint8")
                 cpsnr[t] = metrics.peak_signal_noise_ratio(pred,target)
                 # cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
-                # cssim[t] = metrics.structural_similarity(target, pred)
+                cssim[t] = metrics.structural_similarity(target, pred)
                 pred = draw_frame(pred, t < K)
                 target = draw_frame(target, t < K)
 
@@ -157,8 +157,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
             psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
             ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
 
-        # np.savez(save_path, psnr=psnr_err, ssim=ssim_err)
-        np.savez(save_path, psnr=psnr_err)
+        np.savez(save_path, psnr=psnr_err, ssim=ssim_err)
+        # np.savez(save_path, psnr=psnr_err)
         print("Results saved to "+save_path)
 
     print("Done.")
