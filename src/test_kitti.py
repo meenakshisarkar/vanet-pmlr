@@ -125,7 +125,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                 target = ((true_data[0,t,:,:,:])*255).astype("uint8")         #.astype("uint8")
                 cpsnr[t] = metrics.peak_signal_noise_ratio(pred,target)
                 # cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
-                cssim[t] = metrics.structural_similarity(target, pred)
+                cssim[t] = metrics.structural_similarity(target, pred, multichannel=True)
                 pred = draw_frame(pred, t < K)
                 target = draw_frame(target, t < K)
 

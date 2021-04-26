@@ -75,6 +75,15 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                 timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
         else:
             raise ValueError('Model {} undefined'.format(model_name))
+        # optimizer= tf.train.AdamOptimizer(lr, beta1=0.5)
+        # if train_gen_only:
+        #     g_optim = optimizer.minimize(model.reconst_loss, var_list=model.g_vars) 
+        
+        # else:
+        #     d_optim, g_optim = (
+        #         optimizer.minimize(model.d_loss, var_list=model.d_vars), 
+        #         optimizer.minimize(alpha*model.reconst_loss+beta*model.L_gen, var_list=model.g_vars)
+        #         )
 
         if train_gen_only:
             g_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(model.reconst_loss, var_list=model.g_vars) 
@@ -230,6 +239,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                                     "Iters: [%2d], reconstruction_loss: %.8f, Error_L_p: %.8f, Error_L_stgdl: %.8f" 
                                     % (iters, errG_L_sum+errG_L_stgdl_sum,errG_L_sum, errG_L_stgdl_sum)
                                 )
+
                         
                         counter+=1
 
@@ -267,8 +277,8 @@ if __name__ == "__main__":
     parser.add_argument("--image_h", type=int, dest="image_h",
                         default=64, help="Frame height")
     parser.add_argument("--image_w", type=int, dest="image_w",
-                        # default=208, help="Frame width")
-                        default=64, help="Frame width")
+                        default=208, help="Frame width")
+                        # default=64, help="Frame width")
     parser.add_argument("--vid_type", type=str, dest="vid_type",
                         default='03', help="Grayscale/color, right/left stereo recordings")
     parser.add_argument("--model_name", type=str, dest="model_name",
@@ -282,7 +292,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
                         default=0, help="GPU device id")
     parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
-                        default=0.5, help="beta1 decay rate")
+                        default=0.9, help="beta1 decay rate")
     parser.add_argument("--train_gen_only", default=False, action='store_true')
     parser.add_argument("--iters_start", type=int,  dest="iters_start", required=False, default=0, help='iteration_starts')
 
