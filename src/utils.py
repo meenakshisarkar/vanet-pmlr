@@ -90,7 +90,7 @@ def draw_frame(img, is_input):
   return img 
 
 
-def load_kth_data(f_name, data_path, image_size, K, T): 
+def load_kth_data2(f_name, data_path, image_size, K, T): 
   flip = np.random.binomial(1,.5,1)[0]
   tokens = f_name.split()
   vid_path = data_path + tokens[0] + "_uncomp.avi"
@@ -222,6 +222,25 @@ def load_kitti_data2(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
     accel[t-1]= next_diff - prev_diff  
   
   return seq, diff, accel
+
+def load_kth_data(vid_dir, length, resize_shape, K, T):
+    vid_frames = []
+    low = 0
+    high = length - K - T + 1
+    assert low <= high, 'video length shorter than K+T'
+    stidx = np.random.randint(low, high)
+    for t in range(0, K+T):  
+        fname =  "{}/{:010d}.png".format(vid_dir, t+stidx)
+        im = imageio.imread(fname)
+        im=Image.fromarray(im).resize((resize_shape[1], resize_shape[0]))
+        im= im.convert('L')
+        im= np.expand_dims(im, axis=0)
+        # im = im.reshape(1, resize_shape[0], resize_shape[1], 3)
+        vid_frames.append(im/255.)
+    vid = np.concatenate(vid_frames, axis=0)
+    diff = vid[1:K, ...] - vid[:K-1, ...]
+    accel = diff[1:, ...] - diff[:-1, ...]
+    return vid, diff, accel
 
 def load_kitti_data(vid_dir, length, resize_shape, K, T):
     vid_frames = []
