@@ -13,7 +13,7 @@ import scipy.io as sio
 import os
 
 from vanet import VANET
-# from vnet import VNET
+from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
