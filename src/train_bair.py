@@ -288,7 +288,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, dest="model_name",
                         default='VANET', help="model to train vanet/vnet")
     parser.add_argument("--K", type=int, dest="K",
-                        default=3, help="Number of steps to observe from the past")
+                        default=10, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",
                         default=10, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",

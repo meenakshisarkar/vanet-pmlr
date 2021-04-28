@@ -25,32 +25,53 @@ from PIL import Image
 from PIL import ImageDraw
 
 
-def main(prefix, image_h, image_w, K, T, gpu):
+def main(lr, batch_size, alpha, beta, image_h, image_w, K,
+         T, num_iter, gpu, model_name,beta1,train_timesteps):
     data_path = "../data/BAIR/processed_data/test"
+    c_dim = 3
+    resize_shape = (image_h, image_w)
+    iters = 100
     test_dirs = []
     for d1 in os.listdir(data_path):
         for d2 in os.listdir(os.path.join(data_path, d1)):
             test_dirs.append(os.path.join(data_path, d1, d2))
-    c_dim = 3
-    resize_shape = (image_h, image_w)
-    iters = 100
-    samples_dir= "../results/images/test_bair/"
-    # checkpoint_dir="../models/BAIR_Full_VANET_GPU_id=1_image_h=64_K=10_T=10_batch_size=8_alpha=1.0_beta=0.001_lr=0.0001_no_iteration150000/"
-    # best_model = "VANET.model-151000"
-    model_spec="BAIR_Full_VANET_GPU_id=0_image_h=64_K=10_T=10_batch_size=16_alpha=1.0_beta=0.001_lr=0.0001_no_iteration150000"
-    checkpoint_dir="../models/"+model_spec+"/"
-    best_model = "VANET.model-151000"
+    
+    prefix = ("BAIR_Full_{}".format(model_name)
+              + "_GPU_id="+str(gpu)
+              + "_image_h="+str(image_h)
+              + "_K="+str(K)
+              + "_T="+str(train_timesteps)
+              + "_batch_size="+str(batch_size)
+              + "_alpha="+str(alpha)
+              + "_beta="+str(beta)
+              + "_lr="+str(lr)
+              +"_no_iteration"+str(num_iter))
+
+    print("\n"+prefix+"\n")
+    checkpoint_dir = "../models/"+prefix+"/"
+    # best_model = "VNET.model-26002"
+    samples_dir = "../samples/"+prefix+"/"
+    summary_dir = "../logs/"+prefix+"/"
+    best_model = "VANET.model-150000"
+    model_number="model-150000"
+    
+    
+    
 
     #   else:
     #     checkpoint_dir = "../models/"+prefix+"/"
     #     best_model = None # will pick last model
-    with tf.device("/gpu:{}".format(gpu)): #"/gpu:%d"%gpu[0]):
-        #model = VANET(image_size=[image_h, image_w], c_dim=c_dim,
-        #timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir, training=False)
-        model = VANET(image_size=[image_h, image_w], c_dim = c_dim,
-        timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir, training=False)  
+    with tf.device("/gpu:{}".format(gpu)):
+        if model_name == 'VANET':
+            model = VANET(image_size=[image_h, image_w], c_dim=3,
+                timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
+        elif model_name == 'VNET':
+            model = VNET(image_size=[image_h, image_w], c_dim=3,
+                timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
+        else:
+            raise ValueError('Model {} undefined'.format(model_name)) 
     
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+    gpu_options = tf.GPUOptions(allow_growth=True)
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
                                             log_device_placement=False,
                                             gpu_options=None)) as sess:  #add gpu_option
@@ -65,7 +86,7 @@ def main(prefix, image_h, image_w, K, T, gpu):
             print(" [!] Load failed... exitting")
             return
 
-        quant_dir = "../results/quantitative/BAIR/"+prefix+"/"+model_spec+"/"
+        quant_dir = "../results/quantitative/BAIR/"+prefix+"/"+model_number+"/"
         save_path = quant_dir+"results_model="+model_name+".npz"
         if not exists(quant_dir):
             makedirs(quant_dir)
@@ -90,7 +111,7 @@ def main(prefix, image_h, image_w, K, T, gpu):
             pred_data = sess.run([model.G],
                                     feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
             print (pred_data.shape)
-            savedir = os.path.join('../results/images/BAIR/'+model_spec,'/'.join(d.split('/')[-3:]))
+            savedir = os.path.join('../results/images/BAIR/'+model_number,'/'.join(d.split('/')[-3:]))
             print (savedir )
         # pred_data= pred_data[0]
         # print pred_data.shape
@@ -111,7 +132,7 @@ def main(prefix, image_h, image_w, K, T, gpu):
                 target = ((true_data[0,t,:,:,:])*255).astype("uint8")         #.astype("uint8")
                 cpsnr[t] = metrics.peak_signal_noise_ratio(pred,target)
                 # cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
-                # cssim[t] = metrics.structural_similarity(target, pred)
+                cssim[t] = metrics.structural_similarity(target, pred, multichannel=True)
                 pred = draw_frame(pred, t < K)
                 target = draw_frame(target, t < K)
 
@@ -143,25 +164,41 @@ def main(prefix, image_h, image_w, K, T, gpu):
             psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
             ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
 
-        # np.savez(save_path, psnr=psnr_err, ssim=ssim_err)
-        np.savez(save_path, psnr=psnr_err)
+        np.savez(save_path, psnr=psnr_err, ssim=ssim_err)
+        # np.savez(save_path, psnr=psnr_err)
         print("Results saved to "+save_path)
 
     print("Done.")
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--prefix", type=str, dest="prefix", required=False, 
-                        default= "vanet_wo_gen_v1",help="Prefix for log/snapshot")
+    parser.add_argument("--lr", type=float, dest="lr",
+                        default=0.0001, help="Base Learning Rate")
+    parser.add_argument("--batch_size", type=int, dest="batch_size",
+                        default=8, help="Mini-batch size")
+    parser.add_argument("--alpha", type=float, dest="alpha",
+                        default=1.0, help="Image loss weight")
+    parser.add_argument("--beta", type=float, dest="beta",
+                        default=0.0001, help="GAN loss weight")
     parser.add_argument("--image_h", type=int, dest="image_h",
-                        default=64, help="Pre-trained model")
+                        default=64, help="Frame height")
     parser.add_argument("--image_w", type=int, dest="image_w",
-                        default=64, help="Pre-trained model")
+                        default=64, help="Frame width")
+    parser.add_argument("--model_name", type=str, dest="model_name",
+                        default='VANET', help="model to train vanet/vnet")
     parser.add_argument("--K", type=int, dest="K",
-                        default=10, help="Number of input images")
+                        default=10, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",
                         default=20, help="Number of steps into the future")
-    parser.add_argument("--gpu", type=int, dest="gpu", required=False,
-                        default=0,help="GPU device id")
+    parser.add_argument("--num_iter", type=int, dest="num_iter",
+                        default=150000, help="Number of iterations")
+    parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
+                        default=0, help="GPU device id")
+    parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
+                        default=0.5, help="beta1 decay rate")
+    parser.add_argument("--train_timesteps", type=int,  dest="train_timesteps", required=False,
+                        default=10, help="future time steps")
+    
+
     args = parser.parse_args()
     main(**vars(args))

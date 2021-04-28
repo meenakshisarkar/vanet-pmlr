@@ -40,7 +40,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     # updateD = True
     # updateG = True
     # iters = iters_start
-    prefix = ("KITTI_Full_{}".format(model_name)
+    prefix = ("best_KITTI_Full_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_w)
               + "_K="+str(K)
@@ -56,8 +56,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     # best_model = "VNET.model-26002"
     samples_dir = "../samples/"+prefix+"/"
     summary_dir = "../logs/"+prefix+"/"
-    best_model = "VANET.model-99500"
-    model_number="model-99500"
+    best_model = "VANET.model-147500"
+    model_number="model-147500"
 
     with tf.device("/gpu:{}".format(gpu)):
         if model_name == 'VANET':
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
                         default=0, help="GPU device id")
     parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
-                        default=0.5, help="beta1 decay rate")
+                        default=0.9, help="beta1 decay rate")
     parser.add_argument("--train_timesteps", type=int,  dest="train_timesteps", required=False,
                         default=10, help="future time steps")
     parser.add_argument("--train_gen_only", default=False, action='store_true')

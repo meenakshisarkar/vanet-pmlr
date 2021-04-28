@@ -4,6 +4,7 @@ Some codes from https://github.com/Newmu/dcgan_code
 import cv2
 import random
 import imageio
+# from skimage.color import rgb2gray
 import scipy.misc
 import numpy as np
 import os
@@ -225,19 +226,20 @@ def load_kitti_data2(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
 
 def load_kth_data(vid_dir, length, resize_shape, K, T):
     vid_frames = []
-    low = 0
+    low = 1
     high = length - K - T + 1
     assert low <= high, 'video length shorter than K+T'
     stidx = np.random.randint(low, high)
     for t in range(0, K+T):  
-        fname =  "{}/{:010d}.png".format(vid_dir, t+stidx)
+        fname =  "{}/img_{:06d}.png".format(vid_dir, t+stidx)
         im = imageio.imread(fname)
+        # im=rgb2gray(im)
         im=Image.fromarray(im).resize((resize_shape[1], resize_shape[0]))
         im= im.convert('L')
         im= np.expand_dims(im, axis=0)
-        # im = im.reshape(1, resize_shape[0], resize_shape[1], 3)
         vid_frames.append(im/255.)
     vid = np.concatenate(vid_frames, axis=0)
+    vid= np.expand_dims(vid, axis=-1)
     diff = vid[1:K, ...] - vid[:K-1, ...]
     accel = diff[1:, ...] - diff[:-1, ...]
     return vid, diff, accel
