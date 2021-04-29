@@ -15,7 +15,7 @@ import skimage.measure as measure
 import skimage.metrics as metrics
 
 from vanet import VANET
-# from vnet import VNET
+from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -26,7 +26,7 @@ from PIL import ImageDraw
 
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
-         T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1,train_timesteps):
+         T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1,train_timesteps,model_no):
     data_path = "../data/KITTI/test"
     test_dirs=[]
     dirs_len=[]
@@ -56,8 +56,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     # best_model = "VNET.model-26002"
     samples_dir = "../samples/"+prefix+"/"
     summary_dir = "../logs/"+prefix+"/"
-    best_model = "VANET.model-147500"
-    model_number="model-147500"
+    best_model = model_name".model-"+model_no
+    model_number="model-"+model_no
 
     with tf.device("/gpu:{}".format(gpu)):
         if model_name == 'VANET':
@@ -81,6 +81,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
             print(" [*] Load SUCCESS")
         else:
             print(" [!] Load failed...")
+            return
         quant_dir = "../results/quantitative/KITTI/"+prefix+"/"+model_number+"/"
         save_path = quant_dir+"results_model="+model_name+".npz"
         if not exists(quant_dir):
@@ -182,6 +183,8 @@ if __name__ == "__main__":
                         default='03', help="Grayscale/color, right/left stereo recordings")
     parser.add_argument("--model_name", type=str, dest="model_name",
                         default='VANET', help="model to train vanet/vnet")
+    parser.add_argument("--model_no", type=str, dest="model_name",
+                        default='150000', help="modelnumber from checkpoint for best performance")
     parser.add_argument("--K", type=int, dest="K",
                         default=10, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",

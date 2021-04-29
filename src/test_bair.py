@@ -15,7 +15,7 @@ import skimage.measure as measure
 import skimage.metrics as metrics
 
 from vanet import VANET
-# from vnet import VNET
+from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -26,7 +26,7 @@ from PIL import ImageDraw
 
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, K,
-         T, num_iter, gpu, model_name,beta1,train_timesteps):
+         T, num_iter, gpu, model_name,beta1,train_timesteps,model_no):
     data_path = "../data/BAIR/processed_data/test"
     c_dim = 3
     resize_shape = (image_h, image_w)
@@ -52,8 +52,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
     # best_model = "VNET.model-26002"
     samples_dir = "../samples/"+prefix+"/"
     summary_dir = "../logs/"+prefix+"/"
-    best_model = "VANET.model-150000"
-    model_number="model-150000"
+    best_model = model_name+".model-"+model_no
+    model_number="model-"+model_no
     
     
     
@@ -198,6 +198,8 @@ if __name__ == "__main__":
                         default=0.5, help="beta1 decay rate")
     parser.add_argument("--train_timesteps", type=int,  dest="train_timesteps", required=False,
                         default=10, help="future time steps")
+    parser.add_argument("--model_no", type=str, dest="model_name",
+                        default='150000', help="modelnumber from checkpoint for best performance")
     
 
     args = parser.parse_args()
