@@ -170,10 +170,19 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
                         #     rem_ip_samples.append(curr_sample)
 
                         # need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
-                        model_input = {model.velocity: diff_batch,
-                                            model.accelaration: accel_batch,
-                                            model.xt: seq_batch[:, K-1, :, :],
-                                            model.target: seq_batch}
+                        if model_name == 'VNET':
+                          model_input = {model.velocity: diff_batch,
+                                              model.xt: seq_batch[:, K-1, :, :],
+                                              model.target: seq_batch}
+                        else:
+                          model_input = {model.velocity: diff_batch,
+                                                model.accelaration: accel_batch,
+                                                model.xt: seq_batch[:, K-1, :, :],
+                                                model.target: seq_batch}
+                        # model_input = {model.velocity: diff_batch,
+                        #                     model.accelaration: accel_batch,
+                        #                     model.xt: seq_batch[:, K-1, :, :],
+                        #                     model.target: seq_batch}
                         # if model_name == 'VANET': model_input[model.accelaration] = accel_batch
                         # if train_gen_only or iters<=60000:
                         if train_gen_only :

@@ -298,6 +298,58 @@ def stgdl_v2(gen_frames, gt_frames, gen_frames_dt, gt_frames_dt, alpha, image_si
   return gdl_loss
 
 
+
+def sgdl(gen_frames, gt_frames, gen_frames_dt, gt_frames_dt, alpha, image_size, channel_no):
+  """
+  Arguments:
+    gen_frames: Predicted frames or temporal difference of predicted frames (predicted velocity map).
+    gt_frames: Ground truth predicted frames or the temporal difference of the ground truth frames (true velocity map).
+    gen_frames_dt: The predicted second order temporal difference velocity map if gen_frames is predicted frames or acceleration map
+                    if gen_frames is velocity map
+    gt_frames_dt: The ground truth second order temporal difference velocity map if gt_frames is predicted frames or acceleration map
+                    if gt_frames is velocity map
+    alpha: The power to which each gradient term is raised.
+    image_size: tuple for image shape (h,w)
+  
+  Returns: 
+    The GDL loss.
+  """
+  # create filters [-1, 1] and [[1],[-1]]
+  # for diffing to the left and down respectively.
+  pos = tf.constant(np.identity(channel_no), dtype=tf.float32)
+  neg = -1 * pos
+  # [-1, 1]
+  filter_x = tf.expand_dims(tf.stack([neg, pos]), 0)
+  # [[1],[-1]]
+  filter_y = tf.stack([tf.expand_dims(pos, 0), tf.expand_dims(neg, 0)])
+  # [[[-1]],[[1]]]
+  strides1 = [1, 1, 1, 1]  # stride of (1, 1)
+  padding = 'SAME'
+
+  gen_dx = tf.abs(tf.nn.conv2d(tf.reshape(gen_frames, [-1, image_size[0],image_size[1],channel_no]),
+                                                             filter_x, strides1, padding=padding))
+  gen_dy = tf.abs(tf.nn.conv2d(tf.reshape(gen_frames, [-1, image_size[0],image_size[1],channel_no]),
+                                                             filter_y, strides1, padding=padding))
+  gt_dx = tf.abs(tf.nn.conv2d(tf.reshape(gt_frames, [-1, image_size[0],image_size[1],channel_no]),
+                                                             filter_x, strides1, padding=padding))
+  gt_dy = tf.abs(tf.nn.conv2d(tf.reshape(gt_frames, [-1, image_size[0],image_size[1],channel_no]),
+                                                             filter_y, strides1, padding=padding))
+  
+  
+
+  grad_diff_x = tf.abs(gt_dx - gen_dx)
+  grad_diff_y = tf.abs(gt_dy - gen_dy)
+  gdl_loss = (tf.reduce_mean((grad_diff_x ** alpha + grad_diff_y ** alpha)))
+  # grad_diff_t = tf.abs(gen_frames_dt - gt_frames_dt)
+  # grad_diff_t = tf.reshape(grad_diff_t,[-1, image_size[0], image_size[1], channel_no])
+  # zero_fill_shape = [grad_diff_x.shape[0].value - grad_diff_t.shape[0].value, image_size[0], image_size[1], channel_no]
+  # zero_fill = tf.zeros(zero_fill_shape, dtype=tf.float32)
+  # grad_diff_t_ext = tf.concat([grad_diff_t, zero_fill], axis=0)
+
+  
+  return gdl_loss
+
+
 def linear(input_, output_size, name, stddev=0.02, bias_start=0.0,
            reuse=False, with_w=False):
     shape = input_.get_shape().as_list()

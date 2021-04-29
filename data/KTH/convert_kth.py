@@ -3,7 +3,7 @@ import sys
 from os import listdir, makedirs, system
 from os.path import exists
 image_size = 64 
-data_path = "pwd"
+data_path = os.getcwd()
 # classes = {'boxing', 'handclapping', 'handwaving', 'jogging', 'running', 'walking'}
 for d1 in os.listdir(data_path): 
     if d1.split('.')[-1]=='avi' :    

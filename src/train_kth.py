@@ -11,6 +11,7 @@ import numpy as np
 import scipy.io as sio
 
 from vanet import VANET
+from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
@@ -145,16 +146,24 @@ def main(lr, batch_size, alpha, beta, image_size, K,
             #                                                                 shapes,
             #                                                                 Ks, Ts))
             # print seq_batch[1].shape, output[1][0].shape
+
             for i in range(batch_size):
               seq_batch[i] = output[i][0]
               diff_batch[i] = output[i][1]
               accel_batch[i] = output[i][2]
+            # seq_batch[:] = output[:][0]
+            # diff_batch[:] = output[:][1]
+            # accel_batch[:] = output[:][2]
 
-
-            model_input = {model.velocity: diff_batch,
-                                  model.accelaration: accel_batch,
+            if model_name == 'VNET':
+              model_input = {model.velocity: diff_batch,
                                   model.xt: seq_batch[:, K-1, :, :],
                                   model.target: seq_batch}
+            else:
+              model_input = {model.velocity: diff_batch,
+                                    model.accelaration: accel_batch,
+                                    model.xt: seq_batch[:, K-1, :, :],
+                                    model.target: seq_batch}
     
             
               # samples = np.concatenate((seq_batch[i],diff_batch[i],accel_batch[i]), axis=0)

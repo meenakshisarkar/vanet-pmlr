@@ -1,11 +1,14 @@
+
 import os
-import tensorflow as tf
-import keras
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+tf.random.set_random_seed(77)
+# import keras
 import numpy as np
 from BasicConvLSTMCell import BasicConvLSTMCell
 from ops import *
 from utils import *
-import tensorflow.contrib.slim as slim
+import tf_slim as slim
 
 
 class VNET(object):
@@ -32,7 +35,7 @@ class VNET(object):
         self.velocity = tf.placeholder(tf.float32, self.vel_shape, name='velocity')
         self.xt = tf.placeholder(tf.float32, self.xt_shape, name='xt')
         self.target = tf.placeholder(tf.float32, self.target_shape, name='target')
-        vel_LSTM = BasicConvLSTMCell([self.image_size[0] / 8, self.image_size[1] / 8],
+        vel_LSTM = BasicConvLSTMCell([self.image_size[0] // 8, self.image_size[1] // 8],
                                      [3, 3], self.filters * 4)
         predict = self.forward_model(self.velocity, self.xt, vel_LSTM)
         self.G = tf.concat(axis=1, values=predict)
@@ -95,14 +98,14 @@ class VNET(object):
             # Compute the vel and acc maps from gen and gt frames
             gt_vel_map = gt_frames[:, 1:, ...] - gt_frames[:, :-1, ...]
             gen_vel_map = gen_frames[:, 1:, ...] - gen_frames[:, :-1, ...]
-            gt_acc_map = gt_vel_map[:, 1:, ...] - gt_vel_map[:, :-1, ...]
-            gen_acc_map = gen_vel_map[:, 1:, ...] - gen_vel_map[:, :-1, ...]
+            # gt_acc_map = gt_vel_map[:, 1:, ...] - gt_vel_map[:, :-1, ...]
+            # gen_acc_map = gen_vel_map[:, 1:, ...] - gen_vel_map[:, :-1, ...]
 
             # Compute the gdl and vgdl loss
-            gdl = stgdl_v2(gen_frames, gt_frames, gen_vel_map, gt_vel_map, 1.0, self.image_size, channel_no=3)
-            vgdl = stgdl_v2(gen_vel_map, gt_vel_map, gen_acc_map, gt_acc_map, 1.0, self.image_size, channel_no=3)
+            gdl = sgdl(gen_frames, gt_frames, gen_vel_map, gt_vel_map, 1.0, self.image_size, channel_no=self.c_dim)
+            # vgdl = stgdl_v2(gen_vel_map, gt_vel_map, gen_acc_map, gt_acc_map, 1.0, self.image_size, channel_no=3)
             self.L_stgdl = gdl
-            self.reconst_loss= self.L_p+2*self.L_stgdl
+            self.reconst_loss= self.L_p+1*self.L_stgdl
 
 
             ################# Generative and adversarial losses
@@ -135,18 +138,18 @@ class VNET(object):
             for var in self.g_vars:
                 num_param += int(np.prod(var.get_shape()))
             print("Number of parameters: %d" % num_param)
-        self.saver = tf.train.Saver(max_to_keep=2)
+        self.saver = tf.train.Saver(max_to_keep=1000)
 
 
 
     def forward_model(self, vel_in, xt, vel_LSTM):
-        vel_state = tf.zeros([self.batch_size, self.image_size[0] / 8, self.image_size[1] / 8, 256])  #this takes double the no of channels of the state as it concatinates the c and h states of ConvLSTM
+        vel_state = tf.zeros([self.batch_size, self.image_size[0] // 8, self.image_size[1] // 8, 256])  #this takes double the no of channels of the state as it concatinates the c and h states of ConvLSTM
         # acc_state = tf.zeros([self.batch_size, self.image_size[0] / 8, self.image_size[1] / 8, 256])
         reuse_vel = False
         # reuse_acc= False
 
         # Encoder
-        for t in xrange(self.timesteps - 1):
+        for t in range(self.timesteps - 1):
             h_vel_out, vel_state, vel_res_in = self.vel_enc(vel_in[:, t, :, :, :], vel_state, vel_LSTM, name= "vel_enc", reuse=reuse_vel)
             # if t<self.timesteps-2:
             #     h_acc_out, acc_state, acc_res_in = self.acc_enc(acc_in[:, t, :, :, :], acc_state, acc_LSTM, name= "acc_enc", reuse=reuse_acc)
@@ -154,7 +157,7 @@ class VNET(object):
             # reuse_acc = True
         
         predict = []
-        for t in xrange(self.F):
+        for t in range(self.F):
             if t==0:
                 h_con_state, con_res_in= self.content_enc(xt, name="content_enc", reuse=False)
                 cont_conv = self.conv_layer(h_con_state, h_vel_out, name="conv_layer", reuse= False)
@@ -227,14 +230,14 @@ class VNET(object):
             pool3 = MaxPooling(conv3, [2, 2],stride=2)     #### 16*16*128
         return pool3, con_res_in
 
+
     def conv_layer(self,h_con_state, h_vel_out, name, reuse):
         # print h_con_state.shape, h_acc_out.shape
         with tf.variable_scope(name, reuse):
-            "$Need to be updated$"
             motion_in= tf.concat([h_con_state, h_vel_out], axis= 3 )
             motion_filter= relu(conv2d(motion_in, output_dim= h_vel_out.shape[-1], k_h=3, k_w=3,
                                             d_h=1, d_w=1, name= "conv_layer1", reuse=reuse))
-            cont_conv1=relu(conv2d(motion_filter, output_dim= h_vel_out.shape[-1], k_h=3, k_w=3,
+            cont_conv1=relu(conv2d(motion_filter, output_dim= h_vel_out.shape[-1]//2, k_h=3, k_w=3,
                                             d_h=1, d_w=1, name= "conv_layer2", reuse=reuse ))
             cont_conv2=relu(conv2d(cont_conv1, output_dim= h_vel_out.shape[-1], k_h=3, k_w=3,
                                             d_h=1, d_w=1, name= "conv_layer3", reuse=reuse ))
@@ -270,32 +273,37 @@ class VNET(object):
     def dec_layer(self, cont_conv,res_conv,name, reuse):
         with tf.variable_scope(name, reuse):
 
-            shape1 = [self.batch_size, self.image_size[0]/4,
-                                            self.image_size[1]/4, self.filters*4]
+            shape1 = [self.batch_size, self.image_size[0]//4,
+                                            self.image_size[1]//4, self.filters*4]
             up_samp1 = FixedUnPooling(cont_conv, [2, 2])
             decode1_1= relu(deconv2d(up_samp1,
                                         output_shape=shape1, k_h=3, k_w=3,
                                         d_h=1, d_w=1, name='dec_deconv1_1', reuse=reuse))
             #### 128 channels, image 32*32
-            shape2 = [self.batch_size, self.image_size[0]/2,
-                                            self.image_size[1]/2, self.filters*2]
-            decod2_1 = tf.concat(axis=3, values=[decode1_1, res_conv[2]])
+            shape2 = [self.batch_size, self.image_size[0]//2,
+                                            self.image_size[1]//2, self.filters*2]
+            # decod2_1 = tf.concat(axis=3, values=[decode1_1, res_conv[2]])
+            decod2_1 = tf.add(decode1_1, res_conv[2])
             up_samp2 = FixedUnPooling(decod2_1, [2, 2])
             decode2_2 = relu(deconv2d(up_samp2,
-                                    output_shape=shape2, k_h=5, k_w=5,
+                                    # output_shape=shape2, k_h=5, k_w=5,
+                                    output_shape=shape2, k_h=3, k_w=3,
                                     d_h=1, d_w=1, name='dec_deconv2_2', reuse=reuse))
             ### 64 channels image 64 *64
             shape3 = [self.batch_size, self.image_size[0],
                                             self.image_size[1], self.filters]
-            decod3_1 = tf.concat(axis=3, values=[decode2_2, res_conv[1]])
+            # decod3_1 = tf.concat(axis=3, values=[decode2_2, res_conv[1]])
+            decod3_1 = tf.add(decode2_2, res_conv[1])
             up_samp3 = FixedUnPooling(decod3_1, [2, 2])
             decode3_2 = relu(deconv2d(up_samp3,
-                                    output_shape=shape3, k_h=5, k_w=5,
+                                    # output_shape=shape3, k_h=5, k_w=5,
+                                    output_shape=shape3, k_h=3, k_w=3,
                                     d_h=1, d_w=1, name='dec_deconv3_2', reuse=reuse))
             #### 32 channels image 128*128
-            decod4_1 = tf.concat(axis=3, values=[decode3_2, res_conv[0]])
+            decod4_1 = tf.add(decode3_2, res_conv[0])
             decode4_2 = relu(deconv2d(decod4_1,
-                                    output_shape=shape3, k_h=5, k_w=5,
+                                    # output_shape=shape3, k_h=5, k_w=5,
+                                    output_shape=shape3, k_h=3, k_w=3,
                                     d_h=1, d_w=1, name='dec_deconv4_2', reuse=reuse))
 
             decod5_1 = tf.concat(axis=3, values=[decode4_2, self.xt])
@@ -303,8 +311,9 @@ class VNET(object):
                                 d_h=1, d_w=1, name='decode_out', reuse=reuse))
         return decode_out
 
+
     def discriminator(self, image, name= 'Dis', reuse= False):
-        # print reuse
+        #print (reuse)
         with tf.variable_scope(name, reuse):
             h0 = lrelu(conv2d(image, output_dim=self.df_dim,k_h=5, k_w=5,
                                         d_h=1, d_w=1, name='dis_h0_conv', reuse=reuse))
@@ -321,6 +330,25 @@ class VNET(object):
             h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), self.F, reuse=reuse, name='dis_h3_lin')
 
         return tf.nn.sigmoid(h), h
+
+    # def discriminator(self, image, name= 'Dis', reuse= False):
+    #     # print (reuse)
+    #     with tf.variable_scope(name, reuse):
+    #         h0 = lrelu(conv2d(image, output_dim=self.df_dim,k_h=5, k_w=5,
+    #                                     d_h=1, d_w=1, name='dis_h0_conv', reuse=reuse))
+    #         h0_pool = MaxPooling(h0, [2, 2],stride=2) 
+    #         h1 = lrelu(batch_norm(conv2d(h0_pool, output_dim=self.df_dim*2, k_h=5, k_w=5,
+    #                                     d_h=1, d_w=1, name='dis_h1_conv',reuse=reuse),reuse=reuse, name="bn1"))
+    #         h1_pool = MaxPooling(h1, [2, 2],stride=2) 
+    #         h2 = lrelu(batch_norm(conv2d(h1_pool, output_dim=self.df_dim*4,k_h=5, k_w=5,
+    #                                     d_h=1, d_w=1, name='dis_h2_conv',reuse=reuse),reuse=reuse, name="bn2"))
+    #         h2_pool = MaxPooling(h2, [2, 2],stride=2) 
+    #         h3 = lrelu(batch_norm(conv2d(h2_pool, output_dim=self.df_dim*8,k_h=3, k_w=3,
+    #                                     d_h=1, d_w=1, name='dis_h3_conv',reuse=reuse),reuse=reuse, name="bn3"))
+    #         h3_pool = MaxPooling(h3, [2, 2],stride=2) 
+    #         h = linear(tf.reshape(h3_pool, [self.batch_size, -1]), self.F, reuse=reuse, name='dis_h3_lin')
+
+    #     return tf.nn.sigmoid(h), h
 
     def save(self, sess, checkpoint_dir, step):
         model_name = "VNET.model"
