@@ -198,7 +198,7 @@ if __name__ == "__main__":
                         default=0.5, help="beta1 decay rate")
     parser.add_argument("--train_timesteps", type=int,  dest="train_timesteps", required=False,
                         default=10, help="future time steps")
-    parser.add_argument("--model_no", type=str, dest="model_name",
+    parser.add_argument("--model_no", type=str, dest="model_no",
                         default='150000', help="modelnumber from checkpoint for best performance")
     
 

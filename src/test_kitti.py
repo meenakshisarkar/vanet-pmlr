@@ -183,7 +183,7 @@ if __name__ == "__main__":
                         default='03', help="Grayscale/color, right/left stereo recordings")
     parser.add_argument("--model_name", type=str, dest="model_name",
                         default='VANET', help="model to train vanet/vnet")
-    parser.add_argument("--model_no", type=str, dest="model_name",
+    parser.add_argument("--model_no", type=str, dest="model_no",
                         default='150000', help="modelnumber from checkpoint for best performance")
     parser.add_argument("--K", type=int, dest="K",
                         default=10, help="Number of steps to observe from the past")

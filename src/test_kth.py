@@ -34,9 +34,9 @@ def main(lr, batch_size, alpha, beta, image_size, K,
   dirs_len=[]
   for d1 in os.listdir(data_path):
     for d2 in os.listdir(os.path.join(data_path, d1)):
-        train_dirs.append(os.path.join(data_path, d1, d2))
+        test_dirs.append(os.path.join(data_path, d1, d2))
         dirs_len.append(len(os.listdir(os.path.join(data_path, d1, d2))))
-  data_dict= dict(zip(train_dirs,dirs_len))
+  data_dict= dict(zip(test_dirs,dirs_len))
   prefix  = ("KTH_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_size)
@@ -61,10 +61,10 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
   with tf.device("/gpu:{}".format(gpu)):
       if model_name == 'VANET':
-          model = VANET(image_size=[image_h, image_w], c_dim=1,
+          model = VANET(image_size=[image_size, image_size], c_dim=1,
               timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
       elif model_name == 'VNET':
-          model = VNET(image_size=[image_h, image_w], c_dim=1,
+          model = VNET(image_size=[image_size, image_size], c_dim=1,
               timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
       else:
           raise ValueError('Model {} undefined'.format(model_name))
@@ -93,7 +93,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     for d, l in data_dict.items():
         
         # d = test_dirs[i]
-        seq_batch, diff_batch, accel_batch = load_kth_data(d,l,(image_h, image_w), K, T)
+        seq_batch, diff_batch, accel_batch = load_kth_data(d,l,(image_size, image_size), K, T)
         seq_batch = seq_batch[None, ...]
         diff_batch = diff_batch[None, ...]
         accel_batch = accel_batch[None, ...]
@@ -327,18 +327,18 @@ if __name__ == "__main__":
     parser.add_argument("--K", type=int, dest="K",
                         default=10, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",
-                        default=10, help="Number of steps into the future")
+                        default=20, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",
                         default=150000, help="Number of iterations")
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
-                        default=0, help="GPU device id")
+                        default=1, help="GPU device id")
     parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
                         default=0.9, help="beta1 decay rate")
     parser.add_argument("--train_gen_only", default=False, action='store_true')
     parser.add_argument("--iters_start", type=int,  dest="iters_start", required=False, default=0, help='iteration_starts')
     parser.add_argument("--train_timesteps", type=int,  dest="train_timesteps", required=False,
                           default=10, help="future time steps")
-    parser.add_argument("--model_no", type=str, dest="model_name",
+    parser.add_argument("--model_no", type=str, dest="model_no",
                         default='150000', help="modelnumber from checkpoint for best performance")
     args = parser.parse_args()
     main(**vars(args))
