@@ -23,14 +23,21 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 def main(lr, batch_size, alpha, beta, image_size, K,
          T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1):
   data_path = "../data/KTH/processed/train"
-  # f = open(data_path+"train_data_list_trimmed.txt","r")
-  # trainfiles = f.readlines()
+  train_txt_path = "../data/KTH/"
+  f = open(train_txt_path+"train_kth.txt","r")
+  trainfiles = f.readlines()
+  dir_counter=range(len(trainfiles))
   train_dirs=[]
   dirs_len=[]
-  for d1 in os.listdir(data_path):
-    for d2 in os.listdir(os.path.join(data_path, d1)):
-        train_dirs.append(os.path.join(data_path, d1, d2))
-        dirs_len.append(len(os.listdir(os.path.join(data_path, d1, d2))))
+  for dir_index, lines in zip(dir_counter, trainfiles):
+    d1=lines.split('_')
+    d2=d1[-1].split()
+    train_dirs.append(os.path.join(data_path, d1[1],d1[0]+'-'+d2[0]+'#'+str(dir_index)))
+    dirs_len.append([d2[1],d2[2]])
+  # for d1 in os.listdir(data_path):
+  #   for d2 in os.listdir(os.path.join(data_path, d1)):
+  #       train_dirs.append(os.path.join(data_path, d1, d2))
+  #       dirs_len.append(len(os.listdir(os.path.join(data_path, d1, d2))))
   data_dict= dict(zip(train_dirs,dirs_len))
   margin = 0.3 
   updateD = True

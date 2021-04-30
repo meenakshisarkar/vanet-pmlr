@@ -28,15 +28,22 @@ from PIL import ImageDraw
 def main(lr, batch_size, alpha, beta, image_size, K,
          T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1,train_timesteps,model_no):
   data_path = "../data/KTH/processed/test"
-  # f = open(data_path+"train_data_list_trimmed.txt","r")
-  # trainfiles = f.readlines()
-  test_dirs=[]
+  train_txt_path = "../data/KTH/"
+  f = open(train_txt_path+"test_kth.txt","r")
+  trainfiles = f.readlines()
+  dir_counter=range(len(trainfiles))
+  train_dirs=[]
   dirs_len=[]
-  for d1 in os.listdir(data_path):
-    for d2 in os.listdir(os.path.join(data_path, d1)):
-        test_dirs.append(os.path.join(data_path, d1, d2))
-        dirs_len.append(len(os.listdir(os.path.join(data_path, d1, d2))))
-  data_dict= dict(zip(test_dirs,dirs_len))
+  for dir_index, lines in zip(dir_counter, trainfiles):
+    d1=lines.split('_')
+    d2=d1[-1].split()
+    train_dirs.append(os.path.join(data_path, d1[1],d1[0]+'-'+d2[0]+'#'+str(dir_index)))
+    dirs_len.append([d2[1],d2[2]])
+  # for d1 in os.listdir(data_path):
+  #   for d2 in os.listdir(os.path.join(data_path, d1)):
+  #       train_dirs.append(os.path.join(data_path, d1, d2))
+  #       dirs_len.append(len(os.listdir(os.path.join(data_path, d1, d2))))
+  data_dict= dict(zip(train_dirs,dirs_len))
   prefix  = ("KTH_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_size)

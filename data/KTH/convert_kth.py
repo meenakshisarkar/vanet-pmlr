@@ -12,9 +12,9 @@ for d1 in os.listdir(data_path):
         # print(d2[0].split("n")[1])
         # exit()
         if int(d2[0].split("n")[1])<17:
-          savedir=data_path+"/processed/train/"+d2[1]+'/'+d2[0]
+          savedir=data_path+"/processed/train/"+d2[1]+'/'+d2[0]+'-'+d2[2]
         else:
-          savedir=data_path+"/processed/test/"+d2[1]+'/'+d2[0]
+          savedir=data_path+"/processed/test/"+d2[1]+'/'+d2[0]+'-'+d2[2]
         if not os.path.exists(savedir):
             os.makedirs(savedir)
         cmd = ("ffmpeg -i "+data_dir+" -r 25 -f image2 -s 64x64  "+savedir+

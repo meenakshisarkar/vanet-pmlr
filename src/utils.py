@@ -224,14 +224,14 @@ def load_kitti_data2(vid_dir, data_path, resize_shape, K, T, vid_type='03'):
   
   return seq, diff, accel
 
-def load_kth_data(vid_dir, length, resize_shape, K, T):
+def load_kth_data(vid_dir, dir_length, resize_shape, K, T):
     vid_frames = []
-    low = 1
-    high = length - K - T + 1
+    low = int(dir_length[0])
+    high = int(dir_length[1]) - K - T + 1
     assert low <= high, 'video length shorter than K+T'
     stidx = np.random.randint(low, high)
     for t in range(0, K+T):  
-        fname =  "{}/img_{:06d}.png".format(vid_dir, t+stidx)
+        fname =  "{}/img_{:06d}.png".format(vid_dir.split('#')[0], t+stidx)
         im = imageio.imread(fname)
         # im=rgb2gray(im)
         im=Image.fromarray(im).resize((resize_shape[1], resize_shape[0]))
