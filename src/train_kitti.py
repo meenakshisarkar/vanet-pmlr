@@ -12,6 +12,7 @@ import scipy.io as sio
 import os
 
 from vanet import VANET
+from vanet_ntd import VANET_ntd
 from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
@@ -37,7 +38,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     updateD = True
     updateG = True
     iters = iters_start
-    prefix = ("KITTI_Full_{}".format(model_name)
+    prefix = ("KITTI_Full-v2_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_w)
               + "_K="+str(K)
@@ -69,6 +70,9 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     with tf.device("/gpu:{}".format(gpu)):
         if model_name == 'VANET':
             model = VANET(image_size=[image_h, image_w], c_dim=3,
+                timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
+        elif model_name == 'VANET_ntd':
+            model = VANET_ntd(image_size=[image_h, image_w], c_dim=3,
                 timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
         elif model_name == 'VNET':
             model = VNET(image_size=[image_h, image_w], c_dim=3,
@@ -185,7 +189,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                           model_input = {model.velocity: diff_batch,
                                               model.xt: seq_batch[:, K-1, :, :],
                                               model.target: seq_batch}
-                        else:
+                        elif model_name == 'VANET' or model_name == 'VANET_ntd':
                           model_input = {model.velocity: diff_batch,
                                                 model.accelaration: accel_batch,
                                                 model.xt: seq_batch[:, K-1, :, :],
@@ -287,8 +291,8 @@ if __name__ == "__main__":
     parser.add_argument("--image_h", type=int, dest="image_h",
                         default=64, help="Frame height")
     parser.add_argument("--image_w", type=int, dest="image_w",
-                        default=208, help="Frame width")
-                        # default=64, help="Frame width")
+                        # default=208, help="Frame width")
+                        default=64, help="Frame width")
     parser.add_argument("--vid_type", type=str, dest="vid_type",
                         default='03', help="Grayscale/color, right/left stereo recordings")
     parser.add_argument("--model_name", type=str, dest="model_name",

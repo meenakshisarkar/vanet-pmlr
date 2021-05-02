@@ -10,6 +10,7 @@ import numpy as np
 import os
 import glob
 from PIL import Image
+np.random.seed(77)
 
 def transform(image):
     return image/127.5 - 1.
@@ -228,7 +229,7 @@ def load_kth_data(vid_dir, dir_length, resize_shape, K, T):
     vid_frames = []
     low = int(dir_length[0])
     high = int(dir_length[1]) - K - T + 1
-    assert low <= high, 'video length shorter than K+T'
+    assert low <= high, 'video length shorter than K+T_{}'.format(vid_dir)
     stidx = np.random.randint(low, high)
     for t in range(0, K+T):  
         fname =  "{}/img_{:06d}.png".format(vid_dir.split('#')[0], t+stidx)
@@ -261,6 +262,23 @@ def load_kitti_data(vid_dir, length, resize_shape, K, T):
     diff = vid[1:K, ...] - vid[:K-1, ...]
     accel = diff[1:, ...] - diff[:-1, ...]
     return vid, diff, accel
+def load_caltech_data(vid_dir, length, resize_shape, K, T):
+    vid_frames = []
+    low = 0
+    high = length - K - T + 1
+    assert low <= high, 'video length shorter than K+T'
+    stidx = np.random.randint(low, high)
+    for t in range(0, K+T):  
+        fname =  "{}/img_{:010d}.png".format(vid_dir, t+stidx)
+        im = imageio.imread(fname)
+        im=Image.fromarray(im).resize((resize_shape[1], resize_shape[0]))
+        im= np.expand_dims(im, axis=0)
+        # im = im.reshape(1, resize_shape[0], resize_shape[1], 3)
+        vid_frames.append(im/255.)
+    vid = np.concatenate(vid_frames, axis=0)
+    diff = vid[1:K, ...] - vid[:K-1, ...]
+    accel = diff[1:, ...] - diff[:-1, ...]
+    return vid, diff, accel
 
 def load_bair_data(vid_dir, K, T):
     vid_frames = []
@@ -269,6 +287,21 @@ def load_bair_data(vid_dir, K, T):
         fname = "{}/{}.png".format(vid_dir, i)
         # im = scipy.misc.imread(fname).reshape(1, 64, 64, 3)
         im = imageio.imread(fname).reshape(1, 64, 64, 3)
+        vid_frames.append(im/255.)
+    vid = np.concatenate(vid_frames, axis=0)
+    diff = vid[1:K, ...] - vid[:K-1, ...]
+    accel = diff[1:, ...] - diff[:-1, ...]
+    return vid, diff, accel
+
+def load_bair_towel_data(vid_dir, K, T):
+    vid_frames = []
+    seq_len = K+T
+    for i in range(seq_len):
+        fname = "{}/{}.png".format(vid_dir, i)
+        # im = scipy.misc.imread(fname).reshape(1, 64, 64, 3)
+        im = imageio.imread(fname)
+        im=Image.fromarray(im).resize((64, 64))
+        im= np.expand_dims(im, axis=0)
         vid_frames.append(im/255.)
     vid = np.concatenate(vid_frames, axis=0)
     diff = vid[1:K, ...] - vid[:K-1, ...]

@@ -19,13 +19,14 @@ from os import listdir, makedirs, system
 from os.path import exists
 from argparse import ArgumentParser
 from joblib import Parallel, delayed
+np.random.seed(77)
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, K,
          T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1):
-    data_path = "../data/BAIR/processed_data/train"
+    data_path = "../data/BAIR/processed_data_towel_pick/train"
     train_dirs=[]
     for d1 in os.listdir(data_path):
         for d2 in os.listdir(os.path.join(data_path, d1)):
@@ -36,7 +37,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
     # updateG = False
     # iters = 0
     iters=iters_start
-    prefix = ("BAIR_Full_{}".format(model_name)
+    # prefix = ("BAIR_Full_{}".format(model_name)
+    prefix = ("BAIR_Towel_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_h="+str(image_h)
               + "_K="+str(K)
@@ -136,7 +138,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
                                                 3), dtype="float32")
                         #t0 = time.time()
                         tdirs = np.array(train_dirs)[batchidx]
-                        output = parallel(delayed(load_bair_data)(d, K, T) for d in tdirs)
+                        output = parallel(delayed(load_bair_towel_data)(d, K, T) for d in tdirs)
                         # print seq_batch[0].shape, output[0][0].shape
                         for i in range(batch_size):
                             seq_batch[i] = output[i][0]
@@ -301,7 +303,7 @@ if __name__ == "__main__":
     parser.add_argument("--T", type=int, dest="T",
                         default=10, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",
-                        default=150000, help="Number of iterations")
+                        default=250000, help="Number of iterations")
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
                         default=0, help="GPU device id")
     parser.add_argument("--beta1", type=float,  dest="beta1", required=False,

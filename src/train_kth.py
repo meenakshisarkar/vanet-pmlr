@@ -11,12 +11,14 @@ import numpy as np
 import scipy.io as sio
 
 from vanet import VANET
+from vanet_ntd import VANET_ntd 
 from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
 from os.path import exists
 from argparse import ArgumentParser
 from joblib import Parallel, delayed
+np.random.seed(77)
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
@@ -78,6 +80,9 @@ def main(lr, batch_size, alpha, beta, image_size, K,
             timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
     elif model_name == 'VNET':
         model = VNET(image_size=[image_size, image_size], c_dim=1,
+            timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
+    elif model_name == 'VANET_ntd':
+        model = VANET_ntd(image_size=[image_size, image_size], c_dim=1,
             timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
     else:
         raise ValueError('Model {} undefined'.format(model_name))

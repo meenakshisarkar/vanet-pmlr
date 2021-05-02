@@ -13,7 +13,7 @@ person01_boxing_d3 361 465
 person01_boxing_d4 1 106
 person01_boxing_d4 107 170
 person01_boxing_d4 171 245
-person01_boxing_d4 246 370
+person01_boxing_d4 246 305
 person01_handclapping_d1 1 102
 person01_handclapping_d1 103 182
 person01_handclapping_d1 183 260

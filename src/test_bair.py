@@ -23,6 +23,7 @@ from argparse import ArgumentParser
 from skimage.draw import line_aa
 from PIL import Image
 from PIL import ImageDraw
+np.random.seed(77)
 
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, K,
@@ -45,7 +46,18 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
               + "_alpha="+str(alpha)
               + "_beta="+str(beta)
               + "_lr="+str(lr)
-              +"_no_iteration"+str(num_iter))
+              +"_no_iteration"+str(num_iter)
+              +"_beta1"+str(beta1))
+    prefix_test  = ("BAIR_{}".format(model_name)
+              + "_GPU_id="+str(gpu)
+              + "_image_w="+str(image_w)
+              + "_K="+str(K)
+              + "_FutureT="+str(T)
+              + "_batch_size="+str(batch_size)
+              + "_alpha="+str(alpha)
+              + "_beta="+str(beta)
+              + "_lr="+str(lr)
+              +"_no_iteration="+str(num_iter)+"_beta1"+str(beta1))
 
     print("\n"+prefix+"\n")
     checkpoint_dir = "../models/"+prefix+"/"
@@ -65,6 +77,9 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
         if model_name == 'VANET':
             model = VANET(image_size=[image_h, image_w], c_dim=3,
                 timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
+        elif model_name == 'VANET_ntd':
+            model = VANET_ntd(image_size=[image_h, image_w], c_dim=3,
+                timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
         elif model_name == 'VNET':
             model = VNET(image_size=[image_h, image_w], c_dim=3,
                 timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
@@ -78,15 +93,16 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
 
         tf.global_variables_initializer().run()
 
-        loaded, model_name = model.load(sess, checkpoint_dir,best_model)
+        success_load_model = model.load(sess, checkpoint_dir,best_model)
+        # print(success_load_model[0])
 
-        if loaded:
+        if success_load_model[0]:
             print(" [*] Load SUCCESS")
         else:
             print(" [!] Load failed... exitting")
             return
 
-        quant_dir = "../results/quantitative/BAIR/"+prefix+"/"+model_number+"/"
+        quant_dir = "../results/quantitative/BAIR/"+prefix_test+"/"+model_number+"/"
         save_path = quant_dir+"results_model="+model_name+".npz"
         if not exists(quant_dir):
             makedirs(quant_dir)
@@ -108,10 +124,19 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
             xt = seq_batch[:,K-1,:,:,:]
             # save_images(xt, [1, 1],
             #             samples_dir+"xt_input_to_network_mod%s.png" % (iters))
-            pred_data = sess.run([model.G],
+            if model_name == 'VANET':
+                pred_data = sess.run([model.G],
+                                        feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
+            elif model_name == 'VNET':
+                pred_data = sess.run([model.G],
+                                    feed_dict={model.velocity: diff_batch, model.xt: xt})[0]
+            elif model_name == 'VANET_ntd': 
+                pred_data = sess.run([model.G],
                                     feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
+            # pred_data = sess.run([model.G],
+                                    # feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
             print (pred_data.shape)
-            savedir = os.path.join('../results/images/BAIR/'+model_number,'/'.join(d.split('/')[-3:]))
+            savedir = os.path.join('../results/images/BAIR/'+prefix_test+'/'+model_number,'/'.join(d.split('/')[-3:]))
             print (savedir )
         # pred_data= pred_data[0]
         # print pred_data.shape

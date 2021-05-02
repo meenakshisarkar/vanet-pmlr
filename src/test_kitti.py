@@ -23,6 +23,7 @@ from argparse import ArgumentParser
 from skimage.draw import line_aa
 from PIL import Image
 from PIL import ImageDraw
+np.random.seed(77)
 
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
@@ -40,7 +41,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     # updateD = True
     # updateG = True
     # iters = iters_start
-    prefix = ("best_KITTI_Full_{}".format(model_name)
+    prefix = ("KITTI_Full_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_w)
               + "_K="+str(K)
@@ -50,18 +51,31 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
               + "_beta="+str(beta)
               + "_lr="+str(lr)
               +"_no_iteration="+str(num_iter)+"_beta1"+str(beta1)+'_wo_campus')
+    prefix_test  = ("KITTI_{}".format(model_name)
+              + "_GPU_id="+str(gpu)
+              + "_image_w="+str(image_w)
+              + "_K="+str(K)
+              + "_FutureT="+str(T)
+              + "_batch_size="+str(batch_size)
+              + "_alpha="+str(alpha)
+              + "_beta="+str(beta)
+              + "_lr="+str(lr)
+              +"_no_iteration="+str(num_iter)+"_beta1"+str(beta1))
 
     print("\n"+prefix+"\n")
     checkpoint_dir = "../models/"+prefix+"/"
     # best_model = "VNET.model-26002"
     samples_dir = "../samples/"+prefix+"/"
     summary_dir = "../logs/"+prefix+"/"
-    best_model = model_name".model-"+model_no
+    best_model = model_name+".model-"+model_no
     model_number="model-"+model_no
 
     with tf.device("/gpu:{}".format(gpu)):
         if model_name == 'VANET':
             model = VANET(image_size=[image_h, image_w], c_dim=3,
+                timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
+        elif model_name == 'VANET_ntd':
+            model = VANET_ntd(image_size=[image_h, image_w], c_dim=3,
                 timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
         elif model_name == 'VNET':
             model = VNET(image_size=[image_h, image_w], c_dim=3,
@@ -82,7 +96,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
         else:
             print(" [!] Load failed...")
             return
-        quant_dir = "../results/quantitative/KITTI/"+prefix+"/"+model_number+"/"
+        quant_dir = "../results/quantitative/KITTI/"+prefix_test+"/"+model_number+"/"
         save_path = quant_dir+"results_model="+model_name+".npz"
         if not exists(quant_dir):
             makedirs(quant_dir)
@@ -102,10 +116,18 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
             xt = seq_batch[:,K-1,:,:,:]
             # save_images(xt, [1, 1],
             #             samples_dir+"xt_input_to_network_mod%s.png" % (iters))
-            pred_data = sess.run([model.G],
+            if model_name == 'VANET':
+                pred_data = sess.run([model.G],
+                                        feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
+            elif model_name == 'VNET':
+                pred_data = sess.run([model.G],
+                                    feed_dict={model.velocity: diff_batch, model.xt: xt})[0]
+            elif model_name == 'VANET_ntd': 
+                pred_data = sess.run([model.G],
                                     feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
+
             print (pred_data.shape)
-            savedir = os.path.join('../results/images/KITTI/'+prefix+'/'+model_number,'/'.join(d.split('/')[-4:]))
+            savedir = os.path.join('../results/images/KITTI/'+prefix_test+'/'+model_number,'/'.join(d.split('/')[-4:]))
             print (savedir )
         # pred_data= pred_data[0]
         # print pred_data.shape
@@ -177,8 +199,8 @@ if __name__ == "__main__":
     parser.add_argument("--image_h", type=int, dest="image_h",
                         default=64, help="Frame height")
     parser.add_argument("--image_w", type=int, dest="image_w",
-                        default=208, help="Frame width")
-                        # default=64, help="Frame width")
+                        # default=208, help="Frame width")
+                        default=64, help="Frame width")
     parser.add_argument("--vid_type", type=str, dest="vid_type",
                         default='03', help="Grayscale/color, right/left stereo recordings")
     parser.add_argument("--model_name", type=str, dest="model_name",

@@ -138,7 +138,7 @@ class VNET(object):
             for var in self.g_vars:
                 num_param += int(np.prod(var.get_shape()))
             print("Number of parameters: %d" % num_param)
-        self.saver = tf.train.Saver(max_to_keep=1000)
+        self.saver = tf.train.Saver(max_to_keep=3000)
 
 
 
