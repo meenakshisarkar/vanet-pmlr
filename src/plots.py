@@ -18,22 +18,51 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 	#           + "_beta="+str(beta)
 	#           + "_lr="+str(lr)
 	#           +"_no_iteration="+str(num_iter)+"_beta1"+str(beta1))
-	time=range(0,T)
+	
 	# print("\n"+prefix+"\n")
-	model_name=["VANET","VNET"]
-	color=['-r','-b']
-	model_number=["model-150000"]
-	beta1_lst=[0.9,0.9]
-	beta_lst=[0.0001,0.0001]
-	gpu_lst=[0,1]
-	K_list= [5,5]
-	batch_size_lst=[8,8]
+	if dataset.split('_')[0]== 'KITTI':
+		model_name=["VANET","VNET"]
+		color=['-r','g']
+		model_number=["model-150000","model-150000"]
+		beta1_lst=[0.9,0.9]
+		beta_lst=[0.0001,0.0001]
+		gpu_lst=[1,1]
+		K_list= [5,5]
+		batch_size_lst=[8,8]
+		# model_name=["VANET","VANET_ntd","VNET"]
+		# color=['-r','-b', 'g']
+		# model_number=["model-150000","model-150000","model-150000"]
+		# beta1_lst=[0.9,0.9, 0.9]
+		# beta_lst=[0.0001,0.0001,0.0001]
+		# gpu_lst=[1,1,1]
+		# K_list= [5,5,5]
+		# batch_size_lst=[8,8,8]
+		T=25
+	elif dataset.split('_')[0]=='KTH':
+		model_name=["VANET","VANET_ntd","VNET"]
+		color=['-r','-b', 'g']
+		model_number=["model-150000","model-150000","model-150000"]
+		beta1_lst=[0.9,0.9, 0.5]
+		beta_lst=[0.001,0.001,0.02]
+		gpu_lst=[0,0,1]
+		K_list= [10,10,10]
+		batch_size_lst=[8,8,8]
+		T=20
+	time=range(0,20)
+	# model_name=["VANET","VNET"]
+	# color=['-r','-b']
+	# model_number=["model-200000", "model-200000"]
+	# beta1_lst=[0.5,0.5]
+	# beta_lst=[0.0001,0.0001]
+	# gpu_lst=[0,0]
+	# K_list= [10,10]
+	# batch_size_lst=[8,8]
 	# model_number1="model-150000"
 	# model_number2="model-149500"
 	# model_number3="model-148500"
 	fig, axis= plt.subplots(2)
-	for model, c, beta, beta1, gpu, K, batch_size in zip(model_name, color, beta_lst,beta1_lst,gpu_lst, K_list,batch_size_lst):
-		for model_no in model_number:
+	for model, c, beta, beta1, gpu, K, batch_size, model_no in zip(model_name, color, beta_lst,beta1_lst,gpu_lst, K_list,batch_size_lst, model_number):
+		# for model_no in model_number:
 			prefix = (dataset+"_{}".format(model)
 	          + "_GPU_id="+str(gpu)
 	          + "_image_w="+str(image_w)
@@ -48,10 +77,10 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 			ssim= np.mean(data['ssim'], axis=0)
 			psnr= np.mean(data['psnr'],axis=0)
 			# fig1, ax1= plt.subplot()
-			axis[0].plot(time,ssim, c)
+			axis[0].plot(time,ssim[:20], c)
 			# plt.hold(True)
 			# plt.plot(time,ssim3, '-g')
-			axis[1].plot(time,psnr, c)
+			axis[1].plot(time,psnr[:20], c)
 			# plt.hold(True)
 
 	plt.show()

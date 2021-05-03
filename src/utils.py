@@ -247,12 +247,16 @@ def load_kth_data(vid_dir, dir_length, resize_shape, K, T):
 
 def load_kitti_data(vid_dir, length, resize_shape, K, T):
     vid_frames = []
-    low = 0
-    high = length - K - T + 1
+    low=length[0]
+    high=length[1]-(K+T+5)+1
+    # print(high)
+    # return
+    # low = 0
+    # high = length - K - T + 1
     assert low <= high, 'video length shorter than K+T'
     stidx = np.random.randint(low, high)
     for t in range(0, K+T):  
-        fname =  "{}/{:010d}.png".format(vid_dir, t+stidx)
+        fname =  "{}/{:010d}.png".format(vid_dir.split('#')[0], t+stidx)
         im = imageio.imread(fname)
         im=Image.fromarray(im).resize((resize_shape[1], resize_shape[0]))
         im= np.expand_dims(im, axis=0)

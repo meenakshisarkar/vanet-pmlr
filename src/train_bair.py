@@ -13,6 +13,7 @@ import scipy.io as sio
 import os
 
 from vanet import VANET
+from vanet_ntd import VANET_ntd
 from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
@@ -73,6 +74,9 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
     with tf.device("/gpu:{}".format(gpu)):
         if model_name == 'VANET':
             model = VANET(image_size=[image_h, image_w], c_dim=3,
+                timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
+        elif model_name == 'VANET_ntd':
+            model = VANET_ntd(image_size=[image_h, image_w], c_dim=3,
                 timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
         elif model_name == 'VNET':
             model = VNET(image_size=[image_h, image_w], c_dim=3,

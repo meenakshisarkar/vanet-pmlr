@@ -15,6 +15,7 @@ import skimage.measure as measure
 import skimage.metrics as metrics
 
 from vanet import VANET
+from vanet_ntd import VANET_ntd
 from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
@@ -32,15 +33,18 @@ def main(lr, batch_size, alpha, beta, image_size, K,
   train_txt_path = "../data/KTH/"
   f = open(train_txt_path+"test_kth_trimmed.txt","r")
   trainfiles = f.readlines()
-  trainfiles1 = trainfiles[580:]
-  dir_counter=range(len(trainfiles1))
+  # trainfiles1 = trainfiles[580:]
+  dir_counter=range(len(trainfiles))
   train_dirs=[]
   dirs_len=[]
-  for dir_index, lines in zip(dir_counter, trainfiles1):
+  for dir_index, lines in zip(dir_counter, trainfiles):
     d1=lines.split('_')
     d2=d1[-1].split()
-    train_dirs.append(os.path.join(data_path, d1[1],d1[0]+'-'+d2[0]+'#'+str(dir_index)))
-    dirs_len.append([d2[1],d2[2]])
+    if int(d2[2]) -int(d2[1]) < (T+K):
+      break
+    else:
+      train_dirs.append(os.path.join(data_path, d1[1],d1[0]+'-'+d2[0]+'#'+str(dir_index)))
+      dirs_len.append([d2[1],d2[2]])
   # for d1 in os.listdir(data_path):
   #   for d2 in os.listdir(os.path.join(data_path, d1)):
   #       train_dirs.append(os.path.join(data_path, d1, d2))

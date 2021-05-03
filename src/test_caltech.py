@@ -15,6 +15,7 @@ import skimage.measure as measure
 import skimage.metrics as metrics
 
 from vanet import VANET
+from vanet_ntd import VANET_ntd
 from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
@@ -35,7 +36,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
         for d2 in os.listdir(os.path.join(data_path, d1)):
             test_dirs.append(os.path.join(data_path, d1, d2))
             dirs_len.append(len(os.listdir(os.path.join(data_path, d1,d2))))
-            test_dirs.append(os.path.join(data_path, d1,d2))
+            # test_dirs.append(os.path.join(data_path, d1,d2))
     # with open(data_path+"train_wo_campus.txt", "r") as f:
     #     trainfiles = f.readlines()
     data_dict= dict(zip(test_dirs,dirs_len))
@@ -43,7 +44,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     # updateD = True
     # updateG = True
     # iters = iters_start
-    prefix = ("KITTI_Full_{}".format(model_name)
+    prefix = ("KITTI_Full-v2_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_w)
               + "_K="+str(K)
@@ -53,7 +54,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
               + "_beta="+str(beta)
               + "_lr="+str(lr)
               +"_no_iteration="+str(num_iter)+"_beta1"+str(beta1)+'_wo_campus')
-    prefix_test  = ("CalTech_{}".format(model_name)
+    prefix_test  = ("CalTech_v2_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_w)
               + "_K="+str(K)

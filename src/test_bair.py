@@ -28,7 +28,8 @@ np.random.seed(77)
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, K,
          T, num_iter, gpu, model_name,beta1,train_timesteps,model_no):
-    data_path = "../data/BAIR/processed_data/test"
+    # data_path = "../data/BAIR/processed_data/test"
+    data_path = "../data/BAIR/processed_data_towel_pick/test"
     c_dim = 3
     resize_shape = (image_h, image_w)
     iters = 100
@@ -37,7 +38,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
         for d2 in os.listdir(os.path.join(data_path, d1)):
             test_dirs.append(os.path.join(data_path, d1, d2))
     
-    prefix = ("BAIR_Full_{}".format(model_name)
+    # prefix = ("BAIR_Full_{}".format(model_name)
+    prefix = ("BAIR_Towel_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_h="+str(image_h)
               + "_K="+str(K)
@@ -48,7 +50,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
               + "_lr="+str(lr)
               +"_no_iteration"+str(num_iter)
               +"_beta1"+str(beta1))
-    prefix_test  = ("BAIR_{}".format(model_name)
+    prefix_test  = ("BAIR_towel_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_w)
               + "_K="+str(K)
@@ -114,7 +116,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
         for i in range(len(test_dirs)):
             
             d = test_dirs[i]
-            seq_batch, diff_batch, accel_batch = load_bair_data(d, K, T)
+            seq_batch, diff_batch, accel_batch = load_bair_towel_data(d, K, T)
             seq_batch = seq_batch[None, ...]
             diff_batch = diff_batch[None, ...]
             accel_batch = accel_batch[None, ...]
@@ -214,9 +216,9 @@ if __name__ == "__main__":
     parser.add_argument("--K", type=int, dest="K",
                         default=10, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",
-                        default=20, help="Number of steps into the future")
+                        default=10, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",
-                        default=150000, help="Number of iterations")
+                        default=250000, help="Number of iterations")
     parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
                         default=0, help="GPU device id")
     parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
@@ -224,7 +226,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_timesteps", type=int,  dest="train_timesteps", required=False,
                         default=10, help="future time steps")
     parser.add_argument("--model_no", type=str, dest="model_no",
-                        default='150000', help="modelnumber from checkpoint for best performance")
+                        default='180000', help="modelnumber from checkpoint for best performance")
     
 
     args = parser.parse_args()

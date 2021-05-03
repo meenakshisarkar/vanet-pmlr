@@ -15,6 +15,7 @@ import skimage.measure as measure
 import skimage.metrics as metrics
 
 from vanet import VANET
+from vanet_ntd import VANET_ntd
 from vnet import VNET
 from utils import *
 from os import listdir, makedirs, system
@@ -28,12 +29,18 @@ np.random.seed(77)
 
 def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
          T, num_iter, gpu, train_gen_only, model_name,iters_start,beta1,train_timesteps,model_no):
-    data_path = "../data/KITTI/test"
+    data_path = "../data/KITTI/test2"
     test_dirs=[]
     dirs_len=[]
     for d1 in os.listdir(data_path):
-        dirs_len.append(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"))))
-        test_dirs.append(os.path.join(data_path, d1+"/image_03/data"))
+        dir_len=int(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"))))
+        for l in range(dir_len//40):
+            test_dirs.append(os.path.join(data_path, d1+"/image_03/data"+"#"+str(l)))
+            dirs_len.append([l*40,l*40+40])
+            # dirs_len.append(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"+"#"+str(l)))))
+
+        # dirs_len.append(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"))))
+        # test_dirs.append(os.path.join(data_path, d1+"/image_03/data"))
     # with open(data_path+"train_wo_campus.txt", "r") as f:
     #     trainfiles = f.readlines()
     data_dict= dict(zip(test_dirs,dirs_len))
@@ -106,7 +113,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
         for d, l in data_dict.items():
             
             # d = test_dirs[i]
-            seq_batch, diff_batch, accel_batch = load_kitti_data(d,l,(image_h, image_w), K, T)
+            seq_batch, diff_batch, accel_batch = load_kitti_data(d, l,(image_h, image_w), K, T)
             seq_batch = seq_batch[None, ...]
             diff_batch = diff_batch[None, ...]
             accel_batch = accel_batch[None, ...]

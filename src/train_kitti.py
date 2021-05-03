@@ -29,8 +29,12 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     train_dirs=[]
     dirs_len=[]
     for d1 in os.listdir(data_path):
-        dirs_len.append(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"))))
-        train_dirs.append(os.path.join(data_path, d1+"/image_03/data"))
+        dir_len=int(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"))))
+        for l in range(dir_len//30):
+            train_dirs.append(os.path.join(data_path, d1+"/image_03/data"+"#"+str(l)))
+            dirs_len.append([l*30,l*30+30])
+        # dirs_len.append(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"))))
+        # train_dirs.append(os.path.join(data_path, d1+"/image_03/data"))
     # with open(data_path+"train_wo_campus.txt", "r") as f:
     #     trainfiles = f.readlines()
     data_dict= dict(zip(train_dirs,dirs_len))
@@ -38,7 +42,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     updateD = True
     updateG = True
     iters = iters_start
-    prefix = ("KITTI_Full-v2_{}".format(model_name)
+    prefix = ("KITTI_Full-v1_{}".format(model_name)
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_w)
               + "_K="+str(K)
@@ -298,7 +302,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, dest="model_name",
                         default='VANET', help="model to train vanet/vnet")
     parser.add_argument("--K", type=int, dest="K",
-                        default=10, help="Number of steps to observe from the past")
+                        default=5, help="Number of steps to observe from the past")
     parser.add_argument("--T", type=int, dest="T",
                         default=10, help="Number of steps into the future")
     parser.add_argument("--num_iter", type=int, dest="num_iter",
