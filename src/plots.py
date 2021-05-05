@@ -48,7 +48,17 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 		K_list= [10,10,10]
 		batch_size_lst=[8,8,8]
 		T=20
-	time=range(0,20)
+	elif dataset.split('_')[0]=='BAIR':
+		model_name=["VANET"]
+		color = ['-r']
+		model_number=["model-250000"]
+		beta1_lst=[ 0.5]
+		beta_lst=[0.0001]
+		gpu_lst=[0]
+		K_list= [10]
+		batch_size_lst=[8,8,8]
+		T=10
+	time=range(0,10)
 	# model_name=["VANET","VNET"]
 	# color=['-r','-b']
 	# model_number=["model-200000", "model-200000"]
@@ -60,7 +70,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 	# model_number1="model-150000"
 	# model_number2="model-149500"
 	# model_number3="model-148500"
-	fig, axis= plt.subplots(2)
+	fig, axis= plt.subplots(1,3)
 	for model, c, beta, beta1, gpu, K, batch_size, model_no in zip(model_name, color, beta_lst,beta1_lst,gpu_lst, K_list,batch_size_lst, model_number):
 		# for model_no in model_number:
 			prefix = (dataset+"_{}".format(model)
@@ -76,11 +86,16 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 			data=np.load('../results/quantitative/'+dataset.split('_')[0]+'/'+prefix+'/'+model_no+'/results_model='+model+'.npz')
 			ssim= np.mean(data['ssim'], axis=0)
 			psnr= np.mean(data['psnr'],axis=0)
+			vgg16_csim= np.mean(data['vgg16_csim'], axis=0)
+			fvd_score=data['fvd_score']
+			print(fvd_score)
 			# fig1, ax1= plt.subplot()
 			axis[0].plot(time,ssim[:20], c)
 			# plt.hold(True)
 			# plt.plot(time,ssim3, '-g')
 			axis[1].plot(time,psnr[:20], c)
+			axis[2].plot(time,vgg16_csim[:20], c)
+
 			# plt.hold(True)
 
 	plt.show()
@@ -111,7 +126,7 @@ if __name__ == "__main__":
 	parser.add_argument("--T", type=int, dest="T",
 	                    default=20, help="Number of steps into the future")
 	parser.add_argument("--num_iter", type=int, dest="num_iter",
-	                    default=150000, help="Number of iterations")
+	                    default=250000, help="Number of iterations")
 	parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
 	                    default=0, help="GPU device id")
 	parser.add_argument("--beta1", type=float,  dest="beta1", required=False,

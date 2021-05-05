@@ -17,3 +17,6 @@ models/
 results/
 *.swp
 src/*.pyc
+temp/
+*.gz
+src/temp_test_bair.py

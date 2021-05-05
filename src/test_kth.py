@@ -94,13 +94,23 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                 timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
         else:
             raise ValueError('Model {} undefined'.format(model_name))
-  gpu_options = tf.GPUOptions(allow_growth=True)
+
+        target_vid = tf.placeholder(tf.float32, [16,T,image_h,image_w,3])
+        pred_vid = tf.placeholder(tf.float32, [16,T,image_h,image_w,3]) 
+
+        fvd_err=fvd.calculate_fvd(
+            fvd.create_id3_embedding(fvd.preprocess(target_vid,
+                                                    (224, 224))),
+            fvd.create_id3_embedding(fvd.preprocess(pred_vid,
+                                                    (224, 224))))
+    
+    gpu_options = tf.GPUOptions(allow_growth=True)
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
-                                        log_device_placement=False,
-                                        gpu_options=None)) as sess:  #add gpu_option
+                                            log_device_placement=False,
+                                            gpu_options=None)) as sess:  #add gpu_option
 
     tf.global_variables_initializer().run()
-
+    sess.run(tf.tables_initializer())
     success_load_model = model.load(sess, checkpoint_dir,best_model)
         # print(success_load_model[0])
 
@@ -117,6 +127,9 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     vid_names = []
     psnr_err = np.zeros((0, T))
     ssim_err = np.zeros((0, T))
+    true_data_lst=[]
+    pred_data_lst=[]
+    fvd_score=[]
     for d, l in data_dict.items():
         
         # d = test_dirs[i]
@@ -161,6 +174,11 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                     ##########
         cpsnr = np.zeros((K+T,))
         cssim = np.zeros((K+T,))
+        vgg_csim=np.zeros((K+T,))
+        true_dataRGB=np.concatenate((true_data[...,None],true_data[...,None],true_data[...,None]), axis=-1)
+        pred_dataRGB=np.concatenate((pred_data[...,None],pred_data[...,None],pred_data[...,None]), axis=-1)
+        true_data_lst.append((true_dataRGB*255).astype("uint8"))
+        pred_data_lst.append((pred_dataRGB*255).astype("uint8"))
         pred_data = np.concatenate((seq_batch[:,:K,:,:,:], pred_data),axis=1)
         true_data = np.concatenate((seq_batch[:,:K,:,:,:], true_data),axis=1)
         for t in range(K+T):
@@ -169,6 +187,8 @@ def main(lr, batch_size, alpha, beta, image_size, K,
             cpsnr[t] = metrics.peak_signal_noise_ratio(pred,target)
             # cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
             cssim[t] = metrics.structural_similarity(target, pred, multichannel=True)
+            vgg16_ft_lst=vgg16_feature(np.concatenate((target[None,...],pred[None,...]),axis=0), channel=1)
+            vgg_csim[t]=cosine_similarity(vgg16_ft_lst[None,0,:],vgg16_ft_lst[None, 1,:])
             pred = draw_frame(pred, t < K)
             target = draw_frame(target, t < K)
 
@@ -199,12 +219,21 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
         psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
         ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
+        vgg16_csim_err = np.concatenate((vgg16_csim_err, vgg_csim[None,K:]), axis=0)
+    true_data_lst= np.concatenate(true_data_lst, axis=0)
+    pred_data_lst=np.concatenate(pred_data_lst, axis=0)
+    for i in range(0, len(test_dirs)//16):
+        fvd_score.append(sess.run(fvd_err, feed_dict={target_vid: np.squeeze(true_data_lst[i:i*16+16,...]),
+                             pred_vid: np.squeeze(pred_data_lst[i:i*16+16,...])}))
 
-    np.savez(save_path, psnr=psnr_err, ssim=ssim_err)
+    print("fvd: "+str(fvd_score))
+        # return
+    fvd_score= np.concatenate(fvd_score, axis=0)
+    np.savez(save_path, psnr=psnr_err, ssim=ssim_err,vgg16_csim=vgg16_csim_err, fvd_score=fvd_score )
     # np.savez(save_path, psnr=psnr_err)
     print("Results saved to "+save_path)
 
-print("Done.")
+  print("Done.")
 
 if __name__ == "__main__":
     parser = ArgumentParser()
