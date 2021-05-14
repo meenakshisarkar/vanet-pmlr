@@ -24,8 +24,11 @@ from argparse import ArgumentParser
 from skimage.draw import line_aa
 from PIL import Image
 from PIL import ImageDraw
-from vgg16_feature import *
+# from vgg16_feature import *
 from sklearn.metrics.pairwise import cosine_similarity
+import frechet_video_distance as fvd
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.applications.vgg16 import preprocess_input
 np.random.seed(77)
 
 
@@ -109,6 +112,9 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
 
         tf.global_variables_initializer().run()
         sess.run(tf.tables_initializer())
+        model_vgg = VGG16(weights='imagenet', include_top=False)
+        
+
 
         success_load_model = model.load(sess, checkpoint_dir,best_model)
         # print(success_load_model[0])
@@ -182,7 +188,22 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
                 cpsnr[t] = metrics.peak_signal_noise_ratio(pred,target)
                 # cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
                 cssim[t] = metrics.structural_similarity(target, pred, multichannel=True)
-                vgg16_ft_lst=vgg16_feature(np.concatenate((target[None,:,:,:],pred[None,:,:,:]),axis=0), channel=3)
+                images=np.concatenate((target[None,:,:,:],pred[None,:,:,:]),axis=0)
+                vgg16_feature_list=[]
+                for i in [0,1]:
+            # img = image.load_img(np.squeeze(images[i,:,:,:]), target_size=(224, 224))
+                    img = Image.fromarray(images[i,:,:,:]).resize((224, 224))
+                    # img = image.img_to_array(img)
+                    img = np.expand_dims(img, axis=0)
+                    img = preprocess_input(img)
+                    vgg16_feature = model_vgg.predict(img)
+                    vgg16_feature_np = np.array(vgg16_feature)
+                    vgg16_feature_list.append(vgg16_feature_np.flatten())
+                vgg16_ft_lst=np.array(vgg16_feature_list)
+
+
+
+                # vgg16_ft_lst=vgg16_feature(np.concatenate((target[None,:,:,:],pred[None,:,:,:]),axis=0), channel=3)
                 vgg_csim[t]=cosine_similarity(vgg16_ft_lst[None,0,:],vgg16_ft_lst[None, 1,:])
                 pred = draw_frame(pred, t < K)
                 target = draw_frame(target, t < K)
@@ -219,12 +240,12 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, K,
         true_data_lst= np.concatenate(true_data_lst, axis=0)
         pred_data_lst=np.concatenate(pred_data_lst, axis=0)
         for i in range(0, len(test_dirs)//16):
-            fvd_score.append(sess.run(fvd_err, feed_dict={target_vid: np.squeeze(true_data_lst[i:i*16+16,...]),
-                                 pred_vid: np.squeeze(pred_data_lst[i:i*16+16,...])}))
+            fvd_score.append(sess.run(fvd_err, feed_dict={target_vid: np.squeeze(true_data_lst[i*16:i*16+16,...]),
+                                 pred_vid: np.squeeze(pred_data_lst[i*16:i*16+16,...])}))
 
         print("fvd: "+str(fvd_score))
             # return
-        fvd_score= np.concatenate(fvd_score, axis=0)
+        fvd_score= np.array(fvd_score)
         np.savez(save_path, psnr=psnr_err, ssim=ssim_err,vgg16_csim=vgg16_csim_err, fvd_score=fvd_score )
 
         # np.savez(save_path, psnr=psnr_err, ssim=ssim_err,vgg16_csim=vgg16_csim_err )
@@ -262,7 +283,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_timesteps", type=int,  dest="train_timesteps", required=False,
                         default=10, help="future time steps")
     parser.add_argument("--model_no", type=str, dest="model_no",
-                        default='180000', help="modelnumber from checkpoint for best performance")
+                        default='200000', help="modelnumber from checkpoint for best performance")
     
 
     args = parser.parse_args()

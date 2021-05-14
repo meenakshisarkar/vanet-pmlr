@@ -24,6 +24,11 @@ from argparse import ArgumentParser
 from skimage.draw import line_aa
 from PIL import Image
 from PIL import ImageDraw
+# from vgg16_feature import *
+from sklearn.metrics.pairwise import cosine_similarity
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.applications.vgg16 import preprocess_input
+import frechet_video_distance as fvd
 np.random.seed(77)
 
 
@@ -95,22 +100,24 @@ def main(lr, batch_size, alpha, beta, image_size, K,
         else:
             raise ValueError('Model {} undefined'.format(model_name))
 
-        target_vid = tf.placeholder(tf.float32, [16,T,image_h,image_w,3])
-        pred_vid = tf.placeholder(tf.float32, [16,T,image_h,image_w,3]) 
+        target_vid = tf.placeholder(tf.float32, [16,T,image_size,image_size,3])
+        pred_vid = tf.placeholder(tf.float32, [16,T,image_size,image_size,3]) 
 
         fvd_err=fvd.calculate_fvd(
             fvd.create_id3_embedding(fvd.preprocess(target_vid,
                                                     (224, 224))),
             fvd.create_id3_embedding(fvd.preprocess(pred_vid,
                                                     (224, 224))))
+        # model_vgg = VGG16(weights='imagenet', include_top=False)
     
-    gpu_options = tf.GPUOptions(allow_growth=True)
+  gpu_options = tf.GPUOptions(allow_growth=True)
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
                                             log_device_placement=False,
                                             gpu_options=None)) as sess:  #add gpu_option
 
     tf.global_variables_initializer().run()
     sess.run(tf.tables_initializer())
+    model_vgg = VGG16(weights='imagenet', include_top=False)
     success_load_model = model.load(sess, checkpoint_dir,best_model)
         # print(success_load_model[0])
 
@@ -127,6 +134,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     vid_names = []
     psnr_err = np.zeros((0, T))
     ssim_err = np.zeros((0, T))
+    vgg16_csim_err=np.zeros((0, T))
     true_data_lst=[]
     pred_data_lst=[]
     fvd_score=[]
@@ -159,7 +167,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
         # pred_data = sess.run([model.G],
         #                         feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
-        print (pred_data.shape)
+        # print (pred_data.shape)
         savedir = os.path.join('../results/images/KTH/'+prefix_test+'/'+model_number,'/'.join(d.split('/')[-3:]))
         print (savedir )
     # pred_data= pred_data[0]
@@ -175,19 +183,40 @@ def main(lr, batch_size, alpha, beta, image_size, K,
         cpsnr = np.zeros((K+T,))
         cssim = np.zeros((K+T,))
         vgg_csim=np.zeros((K+T,))
-        true_dataRGB=np.concatenate((true_data[...,None],true_data[...,None],true_data[...,None]), axis=-1)
-        pred_dataRGB=np.concatenate((pred_data[...,None],pred_data[...,None],pred_data[...,None]), axis=-1)
-        true_data_lst.append((true_dataRGB*255).astype("uint8"))
-        pred_data_lst.append((pred_dataRGB*255).astype("uint8"))
+
+        # true_dataRGB=np.concatenate((true_data,true_data,true_data), axis=-1)
+        # pred_dataRGB=np.concatenate((pred_data,pred_data,pred_data), axis=-1)
+        # true_data_lst.append((true_dataRGB*255).astype("uint8"))
+        # pred_data_lst.append((pred_dataRGB*255).astype("uint8"))
         pred_data = np.concatenate((seq_batch[:,:K,:,:,:], pred_data),axis=1)
         true_data = np.concatenate((seq_batch[:,:K,:,:,:], true_data),axis=1)
+        true_dataRGB=np.concatenate((true_data,true_data,true_data), axis=-1)
+        pred_dataRGB=np.concatenate((pred_data,pred_data,pred_data), axis=-1)
+        true_data_lst.append((true_dataRGB[:,K:,:,:,:]*255).astype("uint8"))
+        pred_data_lst.append((pred_dataRGB[:,K:,:,:,:]*255).astype("uint8"))
         for t in range(K+T):
             pred = ((pred_data[0,t,:,:,:])*255).astype("uint8")    #.astype("uint8")
             target = ((true_data[0,t,:,:,:])*255).astype("uint8")         #.astype("uint8")
+            pred_RGB= ((pred_dataRGB[0,t,:,:,:])*255).astype("uint8")    #.astype("uint8")
+            target_RGB = ((true_dataRGB[0,t,:,:,:])*255).astype("uint8")         #.astype("uint8")
             cpsnr[t] = metrics.peak_signal_noise_ratio(pred,target)
             # cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
             cssim[t] = metrics.structural_similarity(target, pred, multichannel=True)
-            vgg16_ft_lst=vgg16_feature(np.concatenate((target[None,...],pred[None,...]),axis=0), channel=1)
+            images=np.concatenate((target_RGB[None,...],pred_RGB[None,...]),axis=0)
+            vgg16_feature_list=[]
+            for i in [0,1]:
+        # img = image.load_img(np.squeeze(images[i,:,:,:]), target_size=(224, 224))
+                # img= np.concatenate((images[i,:,:,None],images[i,:,:,None],images[i,:,:,None]), axis=-1)
+                # print(images[i,...].shape)
+                img = Image.fromarray(images[i,...]).resize((224, 224))
+                # img = image.img_to_array(img)
+                img = np.expand_dims(img, axis=0)
+                img = preprocess_input(img)
+                vgg16_feature = model_vgg.predict(img)
+                vgg16_feature_np = np.array(vgg16_feature)
+                vgg16_feature_list.append(vgg16_feature_np.flatten())
+            vgg16_ft_lst=np.array(vgg16_feature_list)
+            # vgg16_ft_lst=vgg16_feature(np.concatenate((target[None,...],pred[None,...]),axis=0), channel=1)
             vgg_csim[t]=cosine_similarity(vgg16_ft_lst[None,0,:],vgg16_ft_lst[None, 1,:])
             pred = draw_frame(pred, t < K)
             target = draw_frame(target, t < K)
@@ -220,15 +249,16 @@ def main(lr, batch_size, alpha, beta, image_size, K,
         psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
         ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
         vgg16_csim_err = np.concatenate((vgg16_csim_err, vgg_csim[None,K:]), axis=0)
+
     true_data_lst= np.concatenate(true_data_lst, axis=0)
     pred_data_lst=np.concatenate(pred_data_lst, axis=0)
-    for i in range(0, len(test_dirs)//16):
-        fvd_score.append(sess.run(fvd_err, feed_dict={target_vid: np.squeeze(true_data_lst[i:i*16+16,...]),
-                             pred_vid: np.squeeze(pred_data_lst[i:i*16+16,...])}))
+    for i in range(0, len(list(data_dict.keys()))//16):
+            fvd_score.append(sess.run(fvd_err, feed_dict={target_vid: np.squeeze(true_data_lst[i*16:i*16+16,...]),
+                                 pred_vid: np.squeeze(pred_data_lst[i*16:i*16+16,...])}))
 
     print("fvd: "+str(fvd_score))
         # return
-    fvd_score= np.concatenate(fvd_score, axis=0)
+    fvd_score= np.array(fvd_score)
     np.savez(save_path, psnr=psnr_err, ssim=ssim_err,vgg16_csim=vgg16_csim_err, fvd_score=fvd_score )
     # np.savez(save_path, psnr=psnr_err)
     print("Results saved to "+save_path)

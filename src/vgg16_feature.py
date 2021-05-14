@@ -1,6 +1,10 @@
-from keras.preprocessing import image
-from keras.applications.vgg16 import VGG16
-from keras.applications.vgg16 import preprocess_input
+# from keras.preprocessing import image
+
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+tf.random.set_random_seed(77)
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.applications.vgg16 import preprocess_input
 import numpy as np
 from PIL import Image
 

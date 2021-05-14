@@ -26,7 +26,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 		model_number=["model-150000","model-150000"]
 		beta1_lst=[0.9,0.9]
 		beta_lst=[0.0001,0.0001]
-		gpu_lst=[1,1]
+		gpu_lst=[0,0]
 		K_list= [5,5]
 		batch_size_lst=[8,8]
 		# model_name=["VANET","VANET_ntd","VNET"]
@@ -48,17 +48,27 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 		K_list= [10,10,10]
 		batch_size_lst=[8,8,8]
 		T=20
+	# elif dataset.split('_')[0]=='BAIR':
+	# 	model_name=["VANET","VANET_ntd","VNET"]
+	# 	color=['-r','-b', 'g']
+	# 	model_number=["model-200000","model-180000","model-180000"]
+	# 	beta1_lst=[0.5,0.5, 0.5]
+	# 	beta_lst=[0.0001,0.0001,0.0001]
+	# 	gpu_lst=[0,0,0]
+	# 	K_list= [10,10,10]
+	# 	batch_size_lst=[8,8,8]
+	# 	T=10
 	elif dataset.split('_')[0]=='BAIR':
-		model_name=["VANET"]
-		color = ['-r']
-		model_number=["model-250000"]
-		beta1_lst=[ 0.5]
-		beta_lst=[0.0001]
-		gpu_lst=[0]
-		K_list= [10]
-		batch_size_lst=[8,8,8]
+		model_name=["VANET","VNET"]
+		color=['-r', 'g']
+		model_number=["model-180000","model-180000"]
+		beta1_lst=[0.5,0.5]
+		beta_lst=[0.0001,0.0001]
+		gpu_lst=[0,0]
+		K_list= [10,10]
+		batch_size_lst=[8,8]
 		T=10
-	time=range(0,10)
+	time=range(0,T)
 	# model_name=["VANET","VNET"]
 	# color=['-r','-b']
 	# model_number=["model-200000", "model-200000"]
@@ -87,7 +97,8 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
 			ssim= np.mean(data['ssim'], axis=0)
 			psnr= np.mean(data['psnr'],axis=0)
 			vgg16_csim= np.mean(data['vgg16_csim'], axis=0)
-			fvd_score=data['fvd_score']
+			# vgg16_csim= (data['vgg16_csim'][2])
+			fvd_score=np.mean(data['fvd_score'])
 			print(fvd_score)
 			# fig1, ax1= plt.subplot()
 			axis[0].plot(time,ssim[:20], c)
@@ -126,7 +137,7 @@ if __name__ == "__main__":
 	parser.add_argument("--T", type=int, dest="T",
 	                    default=20, help="Number of steps into the future")
 	parser.add_argument("--num_iter", type=int, dest="num_iter",
-	                    default=250000, help="Number of iterations")
+	                    default=150000, help="Number of iterations")
 	parser.add_argument("--gpu", type=int,  dest="gpu", required=False,
 	                    default=0, help="GPU device id")
 	parser.add_argument("--beta1", type=float,  dest="beta1", required=False,
