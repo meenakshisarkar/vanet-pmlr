@@ -55,7 +55,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
   #       train_dirs.append(os.path.join(data_path, d1, d2))
   #       dirs_len.append(len(os.listdir(os.path.join(data_path, d1, d2))))
   data_dict= dict(zip(train_dirs,dirs_len))
-  prefix  = ("KTH_{}".format(model_name)
+  prefix  = ("KTH_{}".format(model_name)+'_NoGAN'
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_size)
               + "_K="+str(K)
@@ -65,7 +65,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
               + "_beta="+str(beta)
               + "_lr="+str(lr)
               +"_no_iteration="+str(num_iter)+"_beta1"+str(beta1))
-  prefix_test  = ("KTH_{}".format(model_name)
+  prefix_test  = ("KTH_{}".format(model_name)+'_NoGAN'
               + "_GPU_id="+str(gpu)
               + "_image_w="+str(image_size)
               + "_K="+str(K)
