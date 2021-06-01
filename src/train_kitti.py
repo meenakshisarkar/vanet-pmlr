@@ -1,3 +1,5 @@
+# Training on KITTI dataset.
+
 import cv2
 import sys
 import time
@@ -33,10 +35,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
         for l in range(dir_len//30):
             train_dirs.append(os.path.join(data_path, d1+"/image_03/data"+"#"+str(l)))
             dirs_len.append([l*30,l*30+30])
-        # dirs_len.append(len(os.listdir(os.path.join(data_path, d1+"/image_03/data"))))
-        # train_dirs.append(os.path.join(data_path, d1+"/image_03/data"))
-    # with open(data_path+"train_wo_campus.txt", "r") as f:
-    #     trainfiles = f.readlines()
+
     data_dict= dict(zip(train_dirs,dirs_len))
     margin = 0.3
     updateD = True
@@ -65,12 +64,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
     if not exists(summary_dir):
         makedirs(summary_dir)
 
-    # if gpu == 0:
-    #     gpus = False  # checking for GPU availability
-    # else:
-    #     gpus = True
 
-    # Selecting cpu or gpu "/gpu:%d"%gpu[0] if gpus else
     with tf.device("/gpu:{}".format(gpu)):
         if model_name == 'VANET':
             model = VANET(image_size=[image_h, image_w], c_dim=3,
@@ -83,15 +77,6 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                 timesteps=K, batch_size=batch_size, F=T, checkpoint_dir=checkpoint_dir)
         else:
             raise ValueError('Model {} undefined'.format(model_name))
-        # optimizer= tf.train.AdamOptimizer(lr, beta1=0.5)
-        # if train_gen_only:
-        #     g_optim = optimizer.minimize(model.reconst_loss, var_list=model.g_vars) 
-        
-        # else:
-        #     d_optim, g_optim = (
-        #         optimizer.minimize(model.d_loss, var_list=model.d_vars), 
-        #         optimizer.minimize(alpha*model.reconst_loss+beta*model.L_gen, var_list=model.g_vars)
-        #         )
 
         if train_gen_only:
             g_optim = tf.train.AdamOptimizer(lr, beta1=0.5).minimize(model.reconst_loss, var_list=model.g_vars) 
@@ -145,49 +130,15 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                                                3), dtype="float32")
                         accel_batch = np.zeros((batch_size, K-2, image_h, image_w,
                                                 3), dtype="float32")
-                        #t0 = time.time()
-                        # tdirs = np.array(train_dirs)[batchidx]
-                        # output = parallel(delayed(load_kitti_data)(d,l, K, T) for d, l in tdirs)
-                        # print(len(data_dict.keys()))
-                        # tdirs = np.array(list(data_dict.keys()))[tuple(batchidx)]
+                        
                         tdirs = np.array(list(data_dict.keys()))[batchidx]
                         output = parallel(delayed(load_kitti_data)(d, data_dict[d],(image_h, image_w), K, T) for d in tdirs)
-                        # tfiles = np.array(trainfiles)[batchidx]
-                        # output = parallel(delayed(load_kitti_data)(f.strip(), data_path, (image_h, image_w), K, T, vid_type)
-                        #                   for f in tfiles)
-                        # print seq_batch[0].shape, output[0][0].shape
-                        for i in range(batch_size):
+                        
                             seq_batch[i] = output[i][0]
                             diff_batch[i] = output[i][1]
                             accel_batch[i] = output[i][2]
                         
-                        # if iters%200==0:    
-                        #     input_sample= seq_batch[0]
-                        #     print("Saving input_sample ...")
-                        #     save_images(input_sample[:K,:,:,::-1], [1, K],
-                        #                     samples_dir+"image_inputs_to_network_mod%s.png" % (iters))
-                        #     samples = diff_batch[0]
-                        #     print samples.shape
-                        #     print("Saving velocity_sample ...")
-                        #     save_images(samples[:,:,:,::-1], [1, K-1],
-                        #                     samples_dir+"velo_inputs_to_network_mod%s.png" % (iters))
-                            
-                        #     samples = accel_batch[0]
-                        #     print samples.shape
-                        #     print("Saving accelaration_sample ...")
-                        #     save_images(samples[:,:,:,::-1], [1, K-2],
-                        #                     samples_dir+"accel_inputs_to_network_mod%s.png" % (iters))
-                        #     if len(rem_ip_samples) > 2:
-                        #         for f in rem_ip_samples.pop(0):
-                        #             if os.path.exists(f):
-                        #                 os.remove(f)
-                        #     curr_sample = ["image_inputs_to_network_mod%s.png" % (iters),
-                        #     "velo_inputs_to_network_mod%s.png" % (iters),
-                        #     "accel_inputs_to_network_mod%s.png" % (iters)]
-                        #     curr_sample = tuple([os.path.join(samples_dir, f) for f in curr_sample])
-                        #     rem_ip_samples.append(curr_sample)
-
-                        # need to change the input to the model and the indexing of the input images needs to be correct.model.target: seq_batch
+                       
 
                         if model_name == 'VNET':
                           model_input = {model.velocity: diff_batch,
@@ -198,11 +149,7 @@ def main(lr, batch_size, alpha, beta, image_h, image_w, vid_type, K,
                                                 model.accelaration: accel_batch,
                                                 model.xt: seq_batch[:, K-1, :, :],
                                                 model.target: seq_batch}
-                        # model_input = {model.velocity: diff_batch,
-                        #                     model.accelaration: accel_batch,
-                        #                     model.xt: seq_batch[:, K-1, :, :],
-                        #                     model.target: seq_batch}
-                        # if model_name == 'VANET': model_input['model.accelaration'] = accel_batch
+                        
                         if train_gen_only:
                             _, summary_str = sess.run([g_optim, g_sum],
                                                         feed_dict= model_input)

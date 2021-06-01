@@ -1,4 +1,10 @@
-import os
+# We propose a novel deep learning framework that focuses on decomposing the motion or the flow of the pixels from the background
+# for an improved and longer prediction of video sequences. We propose to generate multi-timestep pixel level prediction using a 
+# framework that is trained to learn the temporal and spatial dependencies encoded in  video data separately. The proposed framework
+# called Velocity Acceleration Network or VANet is  capable of predicting long term video frames for the static scenario, where the
+# camera is stationary, as well as the dynamic partially observable cases, where the camera is mounted on a moving platform (cars or robots).
+# import os
+
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 tf.random.set_random_seed(77)
@@ -62,30 +68,6 @@ class VANET(object):
             dis_reuse= True
             self.D_fake_, self.D_logits_fake_ = self.discriminator(_Dis_fake_img, reuse= dis_reuse)
 
-            # for l in xrange(self.F):
-            #     in_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l-2:self.timesteps+l,:,:,:], [0,2,3,1,4]),
-            #                                 [self.batch_size,self.image_size[0], self.image_size[1],-1])
-            #     target_img=tf.reshape(self.target[:,self.timesteps+l,:,:,:],
-            #                                 [self.batch_size,self.image_size[0], self.image_size[1],-1])
-            #     # target_img=tf.reshape(tf.transpose(self.target[:,self.timesteps+l,:,:,:], [0,2,3,1,4]),
-            #     #                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-            #     print self.G.shape
-            #     gen_img=tf.reshape(self.G[:,l,:,:,:],
-            #                                 [self.batch_size,self.image_size[0], self.image_size[1],-1])
-            #     # gen_img=tf.reshape(tf.transpose(self.G[:,l,:,:,:], [0,2,3,1,4]),
-            #     #                             [self.batch_size,self.image_size[0], self.image_size[1],-1])
-            #     real_img= tf.concat([in_img,target_img],axis=3)
-            #     fake_img= tf.concat([in_img,gen_img],axis=3)
-
-            #     ########Rethink the variable scope part
-            #     self.D_real_, self.D_logits_real_= self.discriminator(real_img, reuse= dis_reuse)
-            #     if l==0: 
-            #         dis_reuse= True
-            #     self.D_fake_, self.D_logits_fake_ = self.discriminator(fake_img, reuse= dis_reuse)
-            #     _D_real.append(self.D_real_)
-            #     _D_logits_real.append(self.D_logits_real_)
-            #     _D_fake.append(self.D_fake_)
-            #     _D_logits_fake.append(self.D_logits_fake_)
             self.D_real= tf.concat(axis=1, values=self.D_real_)
             self.D_logits_real= tf.concat(axis=1, values= self.D_logits_real_)
             self.D_fake= tf.concat(axis=1, values= self.D_fake_)
@@ -232,8 +214,7 @@ class VANET(object):
             acc_res_in.append(conv3)
             pool3 = MaxPooling(conv3, [2, 2],stride=2)
             h1_state, acc_state = acc_LSTM(pool3, acc_state, scope='acc_lstm1', reuse=reuse)
-            # h2_state, acc_state = acc_LSTM(h1_state, acc_state, scope='acc_lstm2', reuse=reuse)
-            # h_acc_out, acc_state = acc_LSTM(h2_state, acc_state, scope='acc_lstm3', reuse=reuse)
+            
         return h1_state, acc_state, acc_res_in
 
     def content_enc(self,xt,name,reuse):
@@ -260,18 +241,14 @@ class VANET(object):
         with tf.variable_scope(name, reuse):
             "$Need to be updated$"
             motion_in= tf.concat([h_vel_out, h_acc_out], axis= 3 )
-            # motion_filter= relu(conv2d(motion_in, output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
-            #                                 d_h=1, d_w=1, name= "conv_layer1", reuse=reuse))
+            
             motion_filter1= relu(conv2d(motion_in, output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
                                             d_h=1, d_w=1, name= "conv_layer1", reuse=reuse))
             motion_filter2= relu(conv2d(motion_filter1, output_dim= h_acc_out.shape[-1]//2, k_h=3, k_w=3,
                                             d_h=1, d_w=1, name= "conv_layer2", reuse=reuse))
             motion_filter3= relu(conv2d(motion_filter2, output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
                                             d_h=1, d_w=1, name= "conv_layer3", reuse=reuse))
-            # cont_conv1=relu(conv2d(tf.concat([h_con_state,motion_filter],axis=3),output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
-            #                                 d_h=1, d_w=1, name= "conv_layer2", reuse=reuse ))
-            # cont_conv2=relu(conv2d(cont_conv1,output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
-            #                                 d_h=1, d_w=1, name= "conv_layer3", reuse=reuse ))
+
             cont_conv1=relu(conv2d(tf.concat([h_con_state,motion_filter3],axis=3),output_dim= h_acc_out.shape[-1], k_h=3, k_w=3,
                                             d_h=1, d_w=1, name= "conv_layer4", reuse=reuse ))
             cont_conv2=relu(conv2d(cont_conv1,output_dim= h_acc_out.shape[-1]//2, k_h=3, k_w=3,

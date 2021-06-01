@@ -1,3 +1,4 @@
+# Training on KTH dataset.
 import cv2
 import sys
 import time

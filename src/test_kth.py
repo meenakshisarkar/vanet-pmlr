@@ -1,3 +1,7 @@
+# Testing the performance of VANet with KTH dataset. We measure ssim, psnr and frechet_video_distance between the ground truth image frames and the frames predicted 
+# by VANet and the resultant arrays are saved in .npz file.
+
+
 import os
 import cv2
 import sys
@@ -24,10 +28,6 @@ from argparse import ArgumentParser
 from skimage.draw import line_aa
 from PIL import Image
 from PIL import ImageDraw
-# from vgg16_feature import *
-from sklearn.metrics.pairwise import cosine_similarity
-from tensorflow.keras.applications.vgg16 import VGG16
-from tensorflow.keras.applications.vgg16 import preprocess_input
 import frechet_video_distance as fvd
 np.random.seed(77)
 
@@ -38,7 +38,6 @@ def main(lr, batch_size, alpha, beta, image_size, K,
   train_txt_path = "../data/KTH/"
   f = open(train_txt_path+"test_kth_trimmed.txt","r")
   trainfiles = f.readlines()
-  # trainfiles1 = trainfiles[580:]
   dir_counter=range(len(trainfiles))
   train_dirs=[]
   dirs_len=[]
@@ -50,10 +49,6 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     else:
       train_dirs.append(os.path.join(data_path, d1[1],d1[0]+'-'+d2[0]+'#'+str(dir_index)))
       dirs_len.append([d2[1],d2[2]])
-  # for d1 in os.listdir(data_path):
-  #   for d2 in os.listdir(os.path.join(data_path, d1)):
-  #       train_dirs.append(os.path.join(data_path, d1, d2))
-  #       dirs_len.append(len(os.listdir(os.path.join(data_path, d1, d2))))
   data_dict= dict(zip(train_dirs,dirs_len))
   prefix  = ("KTH_{}".format(model_name)+'_NoGAN'
               + "_GPU_id="+str(gpu)
@@ -91,12 +86,8 @@ def main(lr, batch_size, alpha, beta, image_size, K,
         if model_name == 'VANET':
             model = VANET(image_size=[image_size, image_size], c_dim=1,
                 timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
-        elif model_name == 'VANET_ntd':
-            model = VANET_ntd(image_size=[image_size, image_size], c_dim=1,
-                timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
-        elif model_name == 'VNET':
-            model = VNET(image_size=[image_size,image_size], c_dim=1,
-                timesteps=K, batch_size=1, F=T, checkpoint_dir=checkpoint_dir,training=False)
+        #elif model_name == add other model names to generate comperative performance with VANET
+            
         else:
             raise ValueError('Model {} undefined'.format(model_name))
 
@@ -108,7 +99,6 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                                                     (224, 224))),
             fvd.create_id3_embedding(fvd.preprocess(pred_vid,
                                                     (224, 224))))
-        # model_vgg = VGG16(weights='imagenet', include_top=False)
     
   gpu_options = tf.GPUOptions(allow_growth=True)
   with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
@@ -117,7 +107,6 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
     tf.global_variables_initializer().run()
     sess.run(tf.tables_initializer())
-    model_vgg = VGG16(weights='imagenet', include_top=False)
     success_load_model = model.load(sess, checkpoint_dir,best_model)
         # print(success_load_model[0])
 
@@ -134,7 +123,6 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     vid_names = []
     psnr_err = np.zeros((0, T))
     ssim_err = np.zeros((0, T))
-    vgg16_csim_err=np.zeros((0, T))
     true_data_lst=[]
     pred_data_lst=[]
     fvd_score=[]
@@ -154,40 +142,19 @@ def main(lr, batch_size, alpha, beta, image_size, K,
         if model_name=='VANET':
             pred_data = sess.run([model.G],
                                     feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
-        elif model_name=='VNET':
-            pred_data = sess.run([model.G],
-                                feed_dict={model.velocity: diff_batch, model.xt: xt})[0]
-        elif model_name=='VANET_ntd': 
-            pred_data = sess.run([model.G],
-                                feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
         else:
-            print("model_name "+model_name)
+            print("error!!!!")
             return
 
-
-        # pred_data = sess.run([model.G],
-        #                         feed_dict={model.velocity: diff_batch, model.xt: xt, model.accelaration:accel_batch})[0]
-        # print (pred_data.shape)
         savedir = os.path.join('../results/images/KTH/'+prefix_test+'/'+model_number,'/'.join(d.split('/')[-3:]))
         print (savedir )
-    # pred_data= pred_data[0]
-    # print pred_data.shape
+
         if not os.path.exists(savedir):
             os.makedirs(savedir)
-        # sbatch = seq_batch[0, K:, :, :]
-        # samples = np.concatenate((pred_data[0], sbatch), axis=0)
-        # print("Saving sample ...")
-        # save_images(samples[:, :, :, ::-1], [2, T],
-        #             samples_dir+"test_%s.png" % (14))
-                    ##########
+
         cpsnr = np.zeros((K+T,))
         cssim = np.zeros((K+T,))
-        vgg_csim=np.zeros((K+T,))
 
-        # true_dataRGB=np.concatenate((true_data,true_data,true_data), axis=-1)
-        # pred_dataRGB=np.concatenate((pred_data,pred_data,pred_data), axis=-1)
-        # true_data_lst.append((true_dataRGB*255).astype("uint8"))
-        # pred_data_lst.append((pred_dataRGB*255).astype("uint8"))
         pred_data = np.concatenate((seq_batch[:,:K,:,:,:], pred_data),axis=1)
         true_data = np.concatenate((seq_batch[:,:K,:,:,:], true_data),axis=1)
         true_dataRGB=np.concatenate((true_data,true_data,true_data), axis=-1)
@@ -203,21 +170,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
             # cssim[t] = ssim.compute_ssim(Image.fromarray(target), Image.fromarray(pred))
             cssim[t] = metrics.structural_similarity(target, pred, multichannel=True)
             images=np.concatenate((target_RGB[None,...],pred_RGB[None,...]),axis=0)
-            vgg16_feature_list=[]
-            for i in [0,1]:
-        # img = image.load_img(np.squeeze(images[i,:,:,:]), target_size=(224, 224))
-                # img= np.concatenate((images[i,:,:,None],images[i,:,:,None],images[i,:,:,None]), axis=-1)
-                # print(images[i,...].shape)
-                img = Image.fromarray(images[i,...]).resize((224, 224))
-                # img = image.img_to_array(img)
-                img = np.expand_dims(img, axis=0)
-                img = preprocess_input(img)
-                vgg16_feature = model_vgg.predict(img)
-                vgg16_feature_np = np.array(vgg16_feature)
-                vgg16_feature_list.append(vgg16_feature_np.flatten())
-            vgg16_ft_lst=np.array(vgg16_feature_list)
-            # vgg16_ft_lst=vgg16_feature(np.concatenate((target[None,...],pred[None,...]),axis=0), channel=1)
-            vgg_csim[t]=cosine_similarity(vgg16_ft_lst[None,0,:],vgg16_ft_lst[None, 1,:])
+            
             pred = draw_frame(pred, t < K)
             target = draw_frame(target, t < K)
 
@@ -229,8 +182,6 @@ def main(lr, batch_size, alpha, beta, image_size, K,
                 "/pred_%04d.png "+savedir+"/pred.gif")
         cmd3 = "rm "+savedir+"/pred*.png"
 
-        # Comment out "system(cmd3)" if you want to keep the output images
-        # Otherwise only the gifs will be kept
         system(cmd1); 
         system(cmd2) 
         # system(cmd3)
@@ -248,7 +199,6 @@ def main(lr, batch_size, alpha, beta, image_size, K,
 
         psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
         ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
-        vgg16_csim_err = np.concatenate((vgg16_csim_err, vgg_csim[None,K:]), axis=0)
 
     true_data_lst= np.concatenate(true_data_lst, axis=0)
     pred_data_lst=np.concatenate(pred_data_lst, axis=0)
@@ -259,8 +209,7 @@ def main(lr, batch_size, alpha, beta, image_size, K,
     print("fvd: "+str(fvd_score))
         # return
     fvd_score= np.array(fvd_score)
-    np.savez(save_path, psnr=psnr_err, ssim=ssim_err,vgg16_csim=vgg16_csim_err, fvd_score=fvd_score )
-    # np.savez(save_path, psnr=psnr_err)
+    np.savez(save_path, psnr=psnr_err, ssim=ssim_err, fvd_score=fvd_score )
     print("Results saved to "+save_path)
 
   print("Done.")
@@ -297,148 +246,4 @@ if __name__ == "__main__":
                         default='150000', help="modelnumber from checkpoint for best performance")
     args = parser.parse_args()
     main(**vars(args))
-
-  #   vid_names = []
-  #   psnr_err = np.zeros((0, T))
-  #   ssim_err = np.zeros((0, T))
-  #   for i in xrange(len(testfiles)):
-  #     tokens = testfiles[i].split()
-  #     vid_path = data_path+tokens[0]+"_uncomp.avi"
-  #     while True:
-  #       try:
-  #         vid = imageio.get_reader(vid_path,"ffmpeg")
-  #         break
-  #       except Exception:
-  #         print("imageio failed loading frames, retrying")
-
-  #   #   action = vid_path.split("_")[1]
-  #   #   if action in ["running", "jogging"]:
-  #     n_skip = T
-  #   #   else:
-  #   #     n_skip = T  int(tokens[2])-K-T-1
-
-  #     for j in xrange(int(tokens[1]),int(tokens[1])+1 ):
-  #       print("Video "+str(i)+"/"+str(len(testfiles))+". Index "+str(j)+
-  #             "/"+str(vid.get_length()-T-1))
-
-  #       folder_pref = vid_path.split("/")[-1].split(".")[0]
-  #       folder_name = folder_pref+"."+str(j)+"-"+str(j+T)
-
-  #       vid_names.append(folder_name)
-  #       savedir = "../results/images/KTH/"+prefix+"/"+folder_name
-
-  #       seq_batch = np.zeros((1,K+T, image_size, image_size,
-  #                        c_dim), dtype="float32")
-  #       diff_batch = np.zeros((1,K-1, image_size, image_size,
-  #                               c_dim), dtype="float32") 
-  #       for t in xrange(K+T):
-
-  #         # imageio fails randomly sometimes
-  #         while True:
-  #           try:
-  #             img = cv2.resize(vid.get_data(j+t), (image_size, image_size))
-  #             break
-  #           except Exception:
-  #             print("imageio failed loading frames, retrying")
-
-  #         img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-  #         seq_batch[0,t,:,:] = inverse_transform(transform(img[:,:,None]))
-
-  #       for t in range(1,K):
-  #         prev = (seq_batch[0,t-1,:,:])
-  #         next = (seq_batch[0,t,:,:])
-  #       #   prev = inverse_transform(seq_batch[0,t-1,:,:])
-  #       #   next = inverse_transform(seq_batch[0,t,:,:])
-  #         diff = next.astype("float32")-prev.astype("float32")
-  #         diff_batch[0,t-1,:,:] = diff
-  #       print diff_batch.shape
-  #       accel_batch= np.zeros((1,K-2, image_size,image_size,c_dim),dtype="float32")
-  #       for t in range(1,K-1):
-  #         prev_diff= diff_batch[0,t-1,:, :]
-  #         next_diff= diff_batch[0,t,:,:]
-  #         accel_batch[0,t-1,:,:]= next_diff.astype("float32")-prev_diff.astype("float32")
-  #       print accel_batch.shape
-
-  #       samples = diff_batch[0]
-  #       print samples.shape
-  #       print("Saving velocity_sample ...")
-  #       save_images(samples[:,:,:,::-1], [1, K-1],
-  #                       samples_dir+"velo_inputs_to_network_mod%s.png" % (iters))
-                            
-  #       samples = accel_batch[0]
-  #       print samples.shape
-  #       print("Saving accelaration_sample ...")
-  #       save_images(samples[:,:,:,::-1], [1, K-2],
-  #                       samples_dir+"accel_inputs_to_network_mod%s.png" % (iters))
-        
-        
-  #       true_data = seq_batch[:,K:,:,:,:].copy()
-  #       pred_data = np.zeros(true_data.shape, dtype="float32")
-  #       xt = seq_batch[:,K-1,:,:]
-  #       save_images(xt, [1, 1],
-  #                       samples_dir+"xt_input_to_network_mod%s.png" % (iters))
-  #       pred_data = sess.run([model.G],
-  #                               feed_dict={model.velocity: diff_batch,
-  #                                          model.xt: xt,
-  #                                          model.accelaration:accel_batch})[0]
-  #       print pred_data.shape
-        
-  #       # pred_data= pred_data[0]
-  #       # print pred_data.shape
-  #       if not os.path.exists(savedir):
-  #         os.makedirs(savedir)
-  #       sbatch = seq_batch[0, K:, :, :]
-  #       samples = np.concatenate((pred_data[0], sbatch), axis=0)
-  #       print("Saving sample ...")
-  #       save_images(samples[:, :, :, ::-1], [2, T],
-  #                       samples_dir+"test_%s.png" % (14))
-  #                       ##########
-  #       cpsnr = np.zeros((K+T,))
-  #       cssim = np.zeros((K+T,))
-  #       pred_data = np.concatenate((seq_batch[:,:K,:,:], pred_data),axis=1)
-  #       true_data = np.concatenate((seq_batch[:,:K,:,:], true_data),axis=1)
-  #       for t in xrange(K+T):
-  #         pred = ((pred_data[0,t,:,:])*255).astype("uint8")    #.astype("uint8")
-  #         target = ((true_data[0,t,:,:])*255).astype("uint8")         #.astype("uint8")
-
-  #         # cpsnr[t] = measure.compare_psnr(pred,target, range[0,1])
-  #         # cssim[t] = ssim.compute_ssim(Image.fromarray(target),Image.fromarray(pred), range= [0,1])
-  #         # cssim[t] = ssim.compute_ssim(Image.fromarray(cv2.cvtColor(target,
-  #         #                                              cv2.COLOR_GRAY2BGR)),
-  #         #                              Image.fromarray(cv2.cvtColor(pred,
-  #         #                                              cv2.COLOR_GRAY2BGR)), range=[0,255])
-  #         pred = draw_frame(pred, t < K)
-  #         target = draw_frame(target, t < K)
-
-  #         cv2.imwrite(savedir+"/pred_"+"{0:04d}".format(t)+".png", pred)
-  #         cv2.imwrite(savedir+"/gt_"+"{0:04d}".format(t)+".png", target)
-
-  #       cmd1 = "rm "+savedir+"/pred.gif"
-  #       cmd2 = ("ffmpeg -f image2 -framerate 7 -i "+savedir+
-  #               "/pred_%04d.png "+savedir+"/pred.gif")
-  #       cmd3 = "rm "+savedir+"/pred*.png"
-
-  #       # Comment out "system(cmd3)" if you want to keep the output images
-  #       # Otherwise only the gifs will be kept
-  #       #system(cmd1); 
-  #       system(cmd2) 
-  #       system(cmd3)
-
-  #       cmd1 = "rm "+savedir+"/gt.gif"
-  #       cmd2 = ("ffmpeg -f image2 -framerate 7 -i "+savedir+
-  #               "/gt_%04d.png "+savedir+"/gt.gif")
-  #       cmd3 = "rm "+savedir+"/gt*.png"
-
-  #       # Comment out "system(cmd3)" if you want to keep the output images
-  #       # Otherwise only the gifs will be kept
-  #       #system(cmd1); 
-  #       system(cmd2); 
-  #       system(cmd3)
-
-  #   #     psnr_err = np.concatenate((psnr_err, cpsnr[None,K:]), axis=0)
-  #   #     ssim_err = np.concatenate((ssim_err, cssim[None,K:]), axis=0)
-
-  #   # np.savez(save_path, psnr=psnr_err, ssim=ssim_err)
-  #   # print("Results saved to "+save_path)
-  # print("Done.")
 

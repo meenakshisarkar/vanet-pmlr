@@ -1,3 +1,6 @@
+#
+# "code taken from https://github.com/google-research/google-research/tree/master/frechet_video_distance"
+#
 # coding=utf-8
 # Copyright 2021 The Google Research Authors.
 #
