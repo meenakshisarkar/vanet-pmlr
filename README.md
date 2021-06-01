@@ -14,3 +14,4 @@ If you are using VANet, please cite our proposal paper as:
 }
 ```
 ##
+# Pre-trained models will be added soon!!
